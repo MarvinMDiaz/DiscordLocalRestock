@@ -1,0 +1,63 @@
+# 🛍️ Discord Community Restock Tracker Bot – Full Project Spec
+
+## 📌 Overview
+
+Create a **Discord bot** that allows members to report store restocks using a slash command. The bot will log these reports, display recent restocks in clean embedded messages, and automatically clear out entries older than 7 days. This helps community members collaborate and track product availability in real time.
+
+---
+
+## ⚙️ Core Features
+
+### 1. `/report_restock`
+- Slash command to report a restock
+- Inputs:
+  - `store` (string) – e.g., “Target”
+  - `item` (string) – e.g., “Pokémon Cards”
+  - `location` (string) – e.g., “Springfield, VA”
+- Saves:
+  - All inputs
+  - The reporting user
+  - A UTC timestamp
+- Sends a confirmation message:
+  - ✅ “Thanks @user! Logged restock: Pokémon Cards at Target (Springfield, VA)”
+
+### 2. `/view_restocks`
+- Slash command to show all restocks from the **last 7 days**
+- Each result is displayed in a **Discord embed** for visual appeal:
+
+🛒 Restock Report
+━━━━━━━━━━━━━━━━━━━━━
+📍 Store: Target
+📦 Item: Pokémon TCG
+📌 Location: Springfield, VA
+🕒 Reported: July 28, 2025 at 3:25 PM UTC
+👤 Reported by: @TrainerNate
+━━━━━━━━━━━━━━━━━━━━━
+
+
+### 3. Auto Cleanup
+- Uses a scheduled task to check stored data every 6–24 hours
+- Removes any report older than 7 days automatically
+- Keeps the list clean and relevant
+
+---
+
+---
+
+## 💾 JSON Format
+
+Each restock entry is saved in `data.json` like this:
+
+```json
+[
+  {
+    "store": "Target",
+    "item": "Pokemon Cards",
+    "location": "Springfield, VA",
+    "reported_by": "user#1234",
+    "timestamp": "2025-07-28T14:02:00"
+  }
+]
+
+
+Before doing anything confirm with me
