@@ -12,7 +12,17 @@ module.exports = {
             try {
                 await reaction.fetch();
             } catch (error) {
-                console.error('Error fetching reaction:', error);
+                console.error('❌ Error fetching reaction:', error);
+                return;
+            }
+        }
+
+        // Fetch the message if it's partial (for reactions on old messages)
+        if (reaction.message.partial) {
+            try {
+                await reaction.message.fetch();
+            } catch (error) {
+                console.error('❌ Error fetching message:', error);
                 return;
             }
         }
@@ -22,7 +32,10 @@ module.exports = {
         if (reaction.message.channelId !== targetChannelId) return;
 
         const guild = reaction.message.guild;
-        if (!guild) return;
+        if (!guild) {
+            console.log('⚠️ No guild found for reaction');
+            return;
+        }
 
         try {
             const member = await guild.members.fetch(user.id);
@@ -37,35 +50,61 @@ module.exports = {
             // Handle different reactions
             if (emoji === '🚨') {
                 // VA Alerts
-                const vaRole = guild.roles.cache.get(vaRoleId);
+                let vaRole = guild.roles.cache.get(vaRoleId);
+                if (!vaRole) {
+                    vaRole = await guild.roles.fetch(vaRoleId);
+                }
                 if (vaRole) {
                     await member.roles.add(vaRole);
                     console.log(`✅ Added VA role to ${user.username}`);
+                } else {
+                    console.error(`❌ VA role not found: ${vaRoleId}`);
                 }
             } else if (emoji === '📋') {
                 // MD Alerts
-                const mdRole = guild.roles.cache.get(mdRoleId);
+                let mdRole = guild.roles.cache.get(mdRoleId);
+                if (!mdRole) {
+                    mdRole = await guild.roles.fetch(mdRoleId);
+                }
                 if (mdRole) {
                     await member.roles.add(mdRole);
                     console.log(`✅ Added MD role to ${user.username}`);
+                } else {
+                    console.error(`❌ MD role not found: ${mdRoleId}`);
                 }
             } else if (emoji === '📅') {
                 // Weekly VA
-                const weeklyVaRole = guild.roles.cache.get(weeklyVaRoleId);
+                let weeklyVaRole = guild.roles.cache.get(weeklyVaRoleId);
+                if (!weeklyVaRole) {
+                    weeklyVaRole = await guild.roles.fetch(weeklyVaRoleId);
+                }
                 if (weeklyVaRole) {
                     await member.roles.add(weeklyVaRole);
                     console.log(`✅ Added Weekly VA role to ${user.username}`);
+                } else {
+                    console.error(`❌ Weekly VA role not found: ${weeklyVaRoleId}`);
                 }
             } else if (emoji === '📊') {
                 // Weekly MD
-                const weeklyMdRole = guild.roles.cache.get(weeklyMdRoleId);
+                let weeklyMdRole = guild.roles.cache.get(weeklyMdRoleId);
+                if (!weeklyMdRole) {
+                    weeklyMdRole = await guild.roles.fetch(weeklyMdRoleId);
+                }
                 if (weeklyMdRole) {
                     await member.roles.add(weeklyMdRole);
                     console.log(`✅ Added Weekly MD role to ${user.username}`);
+                } else {
+                    console.error(`❌ Weekly MD role not found: ${weeklyMdRoleId}`);
                 }
             }
         } catch (error) {
             console.error('❌ Error handling reaction add:', error);
+            console.error('Error details:', {
+                userId: user.id,
+                username: user.username,
+                emoji: reaction.emoji.name,
+                channelId: reaction.message.channelId
+            });
         }
     }
 };
