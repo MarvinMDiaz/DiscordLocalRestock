@@ -1,12 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const dataManager = require('../utils/dataManager');
 const { gateChannel } = require('../utils/channelGate');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('lookup_va_restocks')
-        .setDescription('View restock dates for Virginia stores (current and previous week)'),
-
     async execute(interaction) {
         try {
             const config = require('../../config/config.json');
