@@ -100,6 +100,10 @@ class DataManager {
     // Save data to JSON file
     async saveData() {
         try {
+            // Ensure data directory exists
+            const dataDir = path.dirname(DATA_FILE);
+            await fs.mkdir(dataDir, { recursive: true });
+            
             await fs.writeFile(DATA_FILE, JSON.stringify(this.data, null, 2));
         } catch (error) {
             console.error('❌ Error saving data:', error);
