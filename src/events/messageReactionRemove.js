@@ -41,11 +41,20 @@ module.exports = {
             const member = await guild.members.fetch(user.id);
             const emoji = reaction.emoji.name;
 
+            // Check if bot has permission to manage roles
+            const botMember = await guild.members.fetch(reaction.client.user.id);
+            if (!botMember.permissions.has('ManageRoles')) {
+                console.error('❌ Bot does not have "Manage Roles" permission!');
+                return;
+            }
+
             // Get role IDs from config
             const vaRoleId = config.roles.localRestockVA;
             const mdRoleId = config.roles.localRestockMD;
             const weeklyVaRoleId = config.roles.weeklyReportVA;
             const weeklyMdRoleId = config.roles.weeklyReportMD;
+
+            console.log(`🔔 Reaction removed: ${emoji} from ${user.username} in channel ${reaction.message.channelId}`);
 
             // Handle different reactions
             if (emoji === '🚨') {

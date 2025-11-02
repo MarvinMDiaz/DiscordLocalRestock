@@ -41,11 +41,20 @@ module.exports = {
             const member = await guild.members.fetch(user.id);
             const emoji = reaction.emoji.name;
 
+            // Check if bot has permission to manage roles
+            const botMember = await guild.members.fetch(reaction.client.user.id);
+            if (!botMember.permissions.has('ManageRoles')) {
+                console.error('❌ Bot does not have "Manage Roles" permission!');
+                return;
+            }
+
             // Get role IDs from config
             const vaRoleId = config.roles.localRestockVA;
             const mdRoleId = config.roles.localRestockMD;
             const weeklyVaRoleId = config.roles.weeklyReportVA;
             const weeklyMdRoleId = config.roles.weeklyReportMD;
+
+            console.log(`🔔 Reaction detected: ${emoji} from ${user.username} in channel ${reaction.message.channelId}`);
 
             // Handle different reactions
             if (emoji === '🚨') {
@@ -55,6 +64,12 @@ module.exports = {
                     vaRole = await guild.roles.fetch(vaRoleId);
                 }
                 if (vaRole) {
+                    // Check if bot's role is higher than the role being assigned
+                    const botRole = botMember.roles.highest;
+                    if (botRole.position <= vaRole.position && botRole.id !== guild.ownerId) {
+                        console.error(`❌ Bot's role (${botRole.name}) is not higher than VA role (${vaRole.name}). Bot role position: ${botRole.position}, VA role position: ${vaRole.position}`);
+                        return;
+                    }
                     await member.roles.add(vaRole);
                     console.log(`✅ Added VA role to ${user.username}`);
                 } else {
@@ -67,6 +82,11 @@ module.exports = {
                     mdRole = await guild.roles.fetch(mdRoleId);
                 }
                 if (mdRole) {
+                    const botRole = botMember.roles.highest;
+                    if (botRole.position <= mdRole.position && botRole.id !== guild.ownerId) {
+                        console.error(`❌ Bot's role (${botRole.name}) is not higher than MD role (${mdRole.name}). Bot role position: ${botRole.position}, MD role position: ${mdRole.position}`);
+                        return;
+                    }
                     await member.roles.add(mdRole);
                     console.log(`✅ Added MD role to ${user.username}`);
                 } else {
@@ -79,6 +99,11 @@ module.exports = {
                     weeklyVaRole = await guild.roles.fetch(weeklyVaRoleId);
                 }
                 if (weeklyVaRole) {
+                    const botRole = botMember.roles.highest;
+                    if (botRole.position <= weeklyVaRole.position && botRole.id !== guild.ownerId) {
+                        console.error(`❌ Bot's role (${botRole.name}) is not higher than Weekly VA role (${weeklyVaRole.name}). Bot role position: ${botRole.position}, Weekly VA role position: ${weeklyVaRole.position}`);
+                        return;
+                    }
                     await member.roles.add(weeklyVaRole);
                     console.log(`✅ Added Weekly VA role to ${user.username}`);
                 } else {
@@ -91,11 +116,18 @@ module.exports = {
                     weeklyMdRole = await guild.roles.fetch(weeklyMdRoleId);
                 }
                 if (weeklyMdRole) {
+                    const botRole = botMember.roles.highest;
+                    if (botRole.position <= weeklyMdRole.position && botRole.id !== guild.ownerId) {
+                        console.error(`❌ Bot's role (${botRole.name}) is not higher than Weekly MD role (${weeklyMdRole.name}). Bot role position: ${botRole.position}, Weekly MD role position: ${weeklyMdRole.position}`);
+                        return;
+                    }
                     await member.roles.add(weeklyMdRole);
                     console.log(`✅ Added Weekly MD role to ${user.username}`);
                 } else {
                     console.error(`❌ Weekly MD role not found: ${weeklyMdRoleId}`);
                 }
+            } else {
+                console.log(`⚠️ Unhandled emoji reaction: ${emoji}`);
             }
         } catch (error) {
             console.error('❌ Error handling reaction add:', error);
