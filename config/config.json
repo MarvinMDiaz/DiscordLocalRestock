@@ -64,11 +64,11 @@
     "_comment2": "Format: \"Store Name - Address\" (address will be extracted automatically in alerts)",
     "target": {
       "va": [
-        "Target - Alexandria - 3101 Richmond Hwy, Alexandria, VA 22305",
+        "Target - Potomac Yard / PY - 3101 Richmond Hwy, Alexandria, VA 22305",
         "Target - Chantilly - 14391 Chantilly Crossing Ln, Chantilly, VA 20151",
         "Target - Dulles 28 - 45130 Columbia Pl, Sterling, VA 20166",
         "Target - Dumfries - 4310 Fortuna Ctr Plz, Dumfries, VA 22025",
-        "Target - Fairfax (Guinea) - 10301 New Guinea Rd, Fairfax, VA 22032",
+        "Target - Burke - 10301 New Guinea Rd, Fairfax, VA 22032",
         "Target - Fairfax (Lakes) - 13047 Fair Lakes Shopping Ctr, Fairfax, VA 22033",
         "Target - Falls Church (7C) - 6100 Arlington Blvd, Falls Church, VA 22044",
         "Target - Falls Church (Skyline) - 5115 Leesburg Pike, Falls Church, VA 22041",
@@ -78,7 +78,7 @@
         "Target - Woodbridge - 2460 Prince William Pkwy, Woodbridge, VA 22192",
         "Target - Reston - 12197 Sunset Hills Rd, Reston, VA 20190",
         "Target - Springfield - 6600 Springfield Mall, Springfield, VA 22150",
-        "Target - Sterling (Potomac) - 46201 Potomac Run Plaza, Sterling, VA 20164",
+        "Target - Potomac Run/PR - 46201 Potomac Run Plaza, Sterling, VA 20164",
         "Target - South Riding - 24670 Arcola Landing Dr, Bldg 8, South Riding, VA 20152",
         "Target - Stafford - 1090 Stafford Market Pl, Stafford, VA 22556",
         "Target - Fredericksburg - 25 S Gateway Dr, Fredericksburg, VA 22406",
