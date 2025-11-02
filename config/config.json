@@ -1,0 +1,166 @@
+{
+  "_comment": "Discord Bot Configuration - Fill in your Discord Server IDs",
+  "_how_to_get_ids": "Right-click channel/role in Discord > Copy ID (Enable Developer Mode first)",
+  "channels": {
+    "_comment": "Main channel IDs for restock alerts and approvals",
+    "restockApprovals": "1434298657158467796",
+    "_restockApprovals_note": "Channel where approval messages with buttons are posted (VA + MD)",
+    "localRestockVA": "1434306702416674816",
+    "_localRestockVA_note": "Public channel for VA restock alerts (where approved alerts are posted)",
+    "restockApprovalsMD": "1399814290378068128",
+    "_restockApprovalsMD_note": "MD approval channel (can be same as restockApprovals for combined approvals)",
+    "localRestockMD": "1434306760268714146",
+    "_localRestockMD_note": "Public channel for MD restock alerts (where approved alerts are posted)",
+    "weeklyReportVA": "1434306888589377586",
+    "_weeklyReportVA_note": "Channel where weekly VA recap reports are posted (Sunday reports)",
+    "weeklyReportMD": "1434306954330767380",
+    "_weeklyReportMD_note": "Channel where weekly MD recap reports are posted (Sunday reports)",
+    "restock_in_progress_va": "1434307040599085178",
+    "restock_in_progress_md": "1434307070429106296"
+  },
+  "commandChannels": {
+    "_comment": "Restrict commands to specific channels (leave empty string \"\" to allow anywhere)",
+    "_comment2": "If set, users can only use these commands in the specified channels",
+    "report_past_restock_va": "1434307040599085178",
+    "_report_past_restock_va_note": "Channel where /report_past_restock_va command can be used",
+    "report_restock_va": "1434307040599085178",
+    "_report_restock_va_note": "DEPRECATED: Use /report_past_restock_va instead",
+    "restock_in_progress_va": "1434307040599085178",
+    "_restock_in_progress_va_note": "Channel where /restock_in_progress_va command can be used",
+    "lookup_va_restocks": "1434307773910355988",
+    "_lookup_va_restocks_note": "Channel where /lookup_va_restocks command can be used",
+    "report_past_restock_md": "1434307070429106296",
+    "_report_past_restock_md_note": "Channel where /report_past_restock_md command can be used",
+    "report_restock_md": "1434307070429106296",
+    "_report_restock_md_note": "DEPRECATED: Use /report_past_restock_md instead",
+    "restock_in_progress_md": "1434307070429106296",
+    "_restock_in_progress_md_note": "Channel where /restock_in_progress_md command can be used",
+    "lookup_md_restocks": "1434307914159624375",
+    "_lookup_md_restocks_note": "Channel where /lookup_md_restocks command can be used"
+  },
+  "channelNames": {
+    "_comment": "Friendly channel names for error messages (optional)",
+    "_comment2": "Format: \"CHANNEL_ID\": \"#channel-name\" - Used in error messages when wrong channel",
+    "1399814332333948978": "#report-restock-va",
+    "1399814516790919330": "#restock-status-lookup-va",
+    "1433256739477917786": "#report-restock-md",
+    "1433256787330596864": "#restock-status-lookup-md"
+  },
+  "roles": {
+    "_comment": "Discord role IDs for mentions and permissions",
+    "localRestockVA": "1434311225835130960",
+    "_localRestockVA_note": "Role mentioned when VA restock alerts are posted",
+    "localRestockMD": "1434311532191420466",
+    "_localRestockMD_note": "Role mentioned when MD restock alerts are posted",
+    "weeklyReportVA": "1434311999939940506",
+    "_weeklyReportVA_note": "Role mentioned when VA weekly recap reports are posted",
+    "weeklyReportMD": "1434312077052350464",
+    "_weeklyReportMD_note": "Role mentioned when MD weekly recap reports are posted",
+    "admin": "1434311087892725891",
+    "_admin_note": "Role required to use /admin_clear_restocks command (also requires Administrator permission)"
+  },
+  "stores": {
+    "_comment": "Store lists organized by store type and region",
+    "_comment2": "Format: \"Store Name - Address\" (address will be extracted automatically in alerts)",
+    "target": {
+      "va": [
+        "Target - Alexandria - 3101 Richmond Hwy, Alexandria, VA 22305",
+        "Target - Chantilly - 14391 Chantilly Crossing Ln, Chantilly, VA 20151",
+        "Target - Dulles 28 - 45130 Columbia Pl, Sterling, VA 20166",
+        "Target - Dumfries - 4310 Fortuna Ctr Plz, Dumfries, VA 22025",
+        "Target - Fairfax (Guinea) - 10301 New Guinea Rd, Fairfax, VA 22032",
+        "Target - Fairfax (Lakes) - 13047 Fair Lakes Shopping Ctr, Fairfax, VA 22033",
+        "Target - Falls Church (7C) - 6100 Arlington Blvd, Falls Church, VA 22044",
+        "Target - Falls Church (Skyline) - 5115 Leesburg Pike, Falls Church, VA 22041",
+        "Target - Hybla Valley (Hybla) - 6600 Richmond Hwy, Alexandria, VA 22306",
+        "Target - Manassas West - 9900 Sowder Village Sq, Manassas, VA 20109",
+        "Target - Mosaic - 2905 District Ave S, Fairfax, VA 22031",
+        "Target - Woodbridge - 2460 Prince William Pkwy, Woodbridge, VA 22192",
+        "Target - Reston - 12197 Sunset Hills Rd, Reston, VA 20190",
+        "Target - Springfield - 6600 Springfield Mall, Springfield, VA 22150",
+        "Target - Sterling (Potomac) - 46201 Potomac Run Plaza, Sterling, VA 20164",
+        "Target - South Riding - 24670 Arcola Landing Dr, Bldg 8, South Riding, VA 20152",
+        "Target - Stafford - 1090 Stafford Market Pl, Stafford, VA 22556",
+        "Target - Fredericksburg - 25 S Gateway Dr, Fredericksburg, VA 22406",
+        "Target - Leesburg - 1200 Edwards Ferry Rd NE, Leesburg, VA 20176"
+      ],
+      "md": [
+        "Target - Rio (Gaithersburg) - 25 Grand Corner Ave, Gaithersburg, MD 20878",
+        "Target - Germantown - 20908 Frederick Rd, Germantown, MD 20876",
+        "Target - Laurel - 3343 Corridor Marketplace, Laurel, MD 20724",
+        "Target - Rockville - 5700 Bou Ave, Rockville, MD 20852",
+        "Target - Glen Burnie - 7951 Nolpark Ct, Glen Burnie, MD 21061",
+        "Target - Annapolis - 1911 Towne Centre Blvd, Annapolis, MD 21401",
+        "Target - Ellicott City - 4390 Montgomery Rd, Ellicott City, MD 21043",
+        "Target - Columbia - 6111 Dobbin Rd, Columbia, MD 21045",
+        "Target - Bowie - 4600 Mitchellville Rd, Bowie, MD 20716",
+        "Target - Upper Marlboro - 10500 Campus Way S, Upper Marlboro, MD 20774",
+        "Target - Frederick - 5437 Urbana Pike, Frederick, MD 21704",
+        "Target - Wheaton (Silver Spring) - 11160 Veirs Mill Rd, Silver Spring, MD 20902",
+        "Target - Owings Mills - 11200 Reisterstown Rd, Owings Mills, MD 21117",
+        "Target - Bel Air - 580 Marketplace Dr, Bel Air, MD 21014",
+        "Target - Towson (York Road) - 1238 Putty Hill Ave, Towson, MD 21286",
+        "Target - Towson (Cockeysville) - 9901 York Rd, Cockeysville, MD 21030",
+        "Target - Pikesville - 1737 Reisterstown Rd, Pikesville, MD 21208",
+        "Target - Westminster - 200 Malcolm Dr, Westminster, MD 21157",
+        "Target - Middle River - 1330 Martin Blvd, Middle River, MD 21220",
+        "Target - White Marsh (Nottingham) - 5230 Campbell Blvd, Nottingham, MD 21236",
+        "Target - Canton (Baltimore) - 3559 Boston St, Baltimore, MD 21224"
+      ]
+    },
+    "bestbuy": {
+      "va": [
+        "Best Buy - Alexandria - 3351 Richmond Hwy, Alexandria, VA 22305",
+        "Best Buy - Baileys Crossroads - 5799 Leesburg Pike, Falls Church, VA 22041",
+        "Best Buy - Fairfax - 13058 Fair Lakes Shopping Center, Fairfax, VA 22033",
+        "Best Buy - Manassas - 8300 Sudley Rd, Manassas, VA 20109",
+        "Best Buy - Pentagon City - 1201 S Hayes St, Arlington, VA 22202",
+        "Best Buy - Springfield - 6734 Springfield Mall, Springfield, VA 22150",
+        "Best Buy - Tysons - 8449 Leesburg Pike, Vienna, VA 22182",
+        "Best Buy - Woodbridge - 14001 Worth Ave, Woodbridge, VA 22192",
+        "Best Buy - Leesburg - 609 Potomac Station Dr, Leesburg, VA 20176"
+      ],
+      "md": [
+        "Best Buy - Wheaton - 10901 Georgia Ave, Wheaton, MD 20902",
+        "Best Buy - Rockville - 1200 Rockville Pike, Rockville, MD 20852",
+        "Best Buy - Laurel - 14160 Baltimore Ave, Laurel, MD 20707",
+        "Best Buy - Elkridge (Columbia) - 8251 Gateway Overlook Dr, Elkridge, MD 21075",
+        "Best Buy - Germantown - 20914 Frederick Rd, Germantown, MD 20876",
+        "Best Buy - Annapolis - 2643 Housley Rd, Annapolis, MD 21401",
+        "Best Buy - Frederick - 7300 Guilford Dr, Frederick, MD 21704",
+        "Best Buy - Bel Air - 602 Boulton St, Bel Air, MD 21014",
+        "Best Buy - Glen Burnie - 6722 Ritchie Hwy, Glen Burnie, MD 21061",
+        "Best Buy - Lanham - 2300 Petrie Ln, Lanham, MD 20706",
+        "Best Buy - Hagerstown - 18053 Garland Groh Blvd, Hagerstown, MD 21740"
+      ]
+    },
+    "barnesandnoble": {
+      "va": [
+        "Barnes & Noble - Fairfax - 12193 Fair Lakes Shopping Ctr, Fairfax, VA 22033",
+        "Barnes & Noble - Springfield - 6670 Springfield Mall, Springfield, VA 22150",
+        "Barnes & Noble - Woodbridge - 14041 Worth Ave, Woodbridge, VA 22192"
+      ],
+      "md": [
+        "Barnes & Noble - Gaithersburg (Rio) - 21 Grand Corner Ave, Gaithersburg, MD 20878",
+        "Barnes & Noble - Columbia (The Mall in Columbia) - 10300 Little Patuxent Pkwy, Columbia, MD 21044",
+        "Barnes & Noble - Bowie - 15455 Emerald Way, Bowie, MD 20716",
+        "Barnes & Noble - Frederick - 5500 Buckeystown Pike, Frederick, MD 21703",
+        "Barnes & Noble - Annapolis - 2516 Solomons Island Rd, Annapolis, MD 21401",
+        "Barnes & Noble - Bel Air - 616 Marketplace Dr, Bel Air, MD 21014",
+        "Barnes & Noble - Pikesville - 1809 Reisterstown Rd, Suite 103, Pikesville, MD 21208",
+        "Barnes & Noble - Westminster - 402 Englar Rd, Suite C, Westminster, MD 21157"
+      ]
+    }
+  },
+  "settings": {
+    "_comment": "Bot settings and preferences",
+    "autoCleanupEnabled": true,
+    "_autoCleanupEnabled_note": "Enable automatic cleanup of old restock data",
+    "cleanupDay": "sunday",
+    "_cleanupDay_note": "Day of week to run cleanup (lowercase: sunday, monday, tuesday, etc.) - Recommended: sunday for weekly reset",
+    "cleanupTime": "00:00",
+    "_cleanupTime_note": "Time to run cleanup (24-hour format: HH:MM)",
+    "weeklyReportHour": 20,
+    "_weeklyReportHour_note": "Hour (0-23) to send weekly report on Sunday (default: 20 = 8pm EST). Cleanup runs 1 hour after report. Note: Time is based on server timezone. For EST, ensure server is set to EST/EDT timezone."
+  }
+}
