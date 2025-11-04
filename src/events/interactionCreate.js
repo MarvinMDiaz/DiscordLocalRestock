@@ -200,40 +200,40 @@ module.exports = {
                     }
                 }
 
-            // If we get here, the button wasn't handled
-            console.warn(`⚠️ Unhandled button interaction: ${customId}`);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ This button is not yet implemented or there was an error processing it.',
-                    ephemeral: true
-                });
-            }
-        } catch (error) {
-            console.error('❌ Error handling button interaction:', error);
-            console.error('Button customId:', interaction.customId);
-            console.error('Error stack:', error.stack);
-            
-            if (!interaction.replied && !interaction.deferred) {
-                try {
+                // If we get here, the button wasn't handled
+                console.warn(`⚠️ Unhandled button interaction: ${customId}`);
+                if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
-                        content: '❌ There was an error processing this button. Please try again.',
+                        content: '❌ This button is not yet implemented or there was an error processing it.',
                         ephemeral: true
                     });
-                } catch (replyError) {
-                    console.error('❌ Error sending error reply:', replyError);
                 }
-            } else if (interaction.deferred && !interaction.replied) {
-                try {
-                    await interaction.editReply({
-                        content: '❌ There was an error processing this button. Please try again.'
-                    });
-                } catch (editError) {
-                    console.error('❌ Error sending error edit:', editError);
+            } catch (error) {
+                console.error('❌ Error handling button interaction:', error);
+                console.error('Button customId:', interaction.customId);
+                console.error('Error stack:', error.stack);
+                
+                if (!interaction.replied && !interaction.deferred) {
+                    try {
+                        await interaction.reply({
+                            content: '❌ There was an error processing this button. Please try again.',
+                            ephemeral: true
+                        });
+                    } catch (replyError) {
+                        console.error('❌ Error sending error reply:', replyError);
+                    }
+                } else if (interaction.deferred && !interaction.replied) {
+                    try {
+                        await interaction.editReply({
+                            content: '❌ There was an error processing this button. Please try again.'
+                        });
+                    } catch (editError) {
+                        console.error('❌ Error sending error edit:', editError);
+                    }
                 }
             }
+            return;
         }
-        return;
-    }
 
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
