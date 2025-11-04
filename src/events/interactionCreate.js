@@ -170,35 +170,35 @@ module.exports = {
                     return;
                 }
 
-            // Handle config setup buttons
-            if (customId.startsWith('admin_config_')) {
-                const configHandlers = require('../utils/configSetupHandler');
-                
-                if (customId === 'admin_config_quick_setup') {
-                    await configHandlers.handleQuickSetupSelect(interaction);
-                    return;
-                }
+                // Handle config setup buttons
+                if (customId.startsWith('admin_config_')) {
+                    const configHandlers = require('../utils/configSetupHandler');
+                    
+                    if (customId === 'admin_config_quick_setup') {
+                        await configHandlers.handleQuickSetupSelect(interaction);
+                        return;
+                    }
 
-                if (customId.startsWith('admin_config_channel_')) {
-                    await configHandlers.handleConfigChannelSubmit(interaction);
-                    return;
-                }
+                    if (customId.startsWith('admin_config_channel_')) {
+                        await configHandlers.handleConfigChannelSubmit(interaction);
+                        return;
+                    }
 
-                if (customId.startsWith('admin_config_role_')) {
-                    await configHandlers.handleConfigRoleSubmit(interaction);
-                    return;
-                }
+                    if (customId.startsWith('admin_config_role_')) {
+                        await configHandlers.handleConfigRoleSubmit(interaction);
+                        return;
+                    }
 
-                if (customId === 'admin_config_essential_channels') {
-                    await configHandlers.handleEssentialChannelsSubmit(interaction);
-                    return;
-                }
+                    if (customId === 'admin_config_essential_channels') {
+                        await configHandlers.handleEssentialChannelsSubmit(interaction);
+                        return;
+                    }
 
-                if (customId === 'admin_config_essential_roles') {
-                    await configHandlers.handleEssentialRolesSubmit(interaction);
-                    return;
+                    if (customId === 'admin_config_essential_roles') {
+                        await configHandlers.handleEssentialRolesSubmit(interaction);
+                        return;
+                    }
                 }
-            }
 
             // If we get here, the button wasn't handled
             console.warn(`⚠️ Unhandled button interaction: ${customId}`);
