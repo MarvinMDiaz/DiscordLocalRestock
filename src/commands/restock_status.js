@@ -2,6 +2,22 @@ const { EmbedBuilder } = require('discord.js');
 const dataManager = require('../utils/dataManager');
 const { gateChannel } = require('../utils/channelGate');
 
+/**
+ * Format date as "Day MM/DD/YY" (e.g., "Saturday 11/01/25")
+ */
+function formatRestockDate(dateString) {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[date.getDay()];
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    
+    return `${dayName} ${month}/${day}/${year}`;
+}
+
 module.exports = {
     async execute(interaction) {
         try {
@@ -62,11 +78,11 @@ module.exports = {
             // Add fields for each store showing current and previous week dates
             for (const storeData of regionRestocks) {
                 const currentWeekDate = storeData.current_week_restock_date 
-                    ? `<t:${Math.floor(new Date(storeData.current_week_restock_date).getTime() / 1000)}:R>`
+                    ? formatRestockDate(storeData.current_week_restock_date)
                     : 'Not Restocked';
                 
                 const previousWeekDate = storeData.previous_week_restock_date 
-                    ? `<t:${Math.floor(new Date(storeData.previous_week_restock_date).getTime() / 1000)}:R>`
+                    ? formatRestockDate(storeData.previous_week_restock_date)
                     : 'N/A';
 
                 embed.addFields({
