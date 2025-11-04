@@ -30,7 +30,7 @@ async function sendAutoDeleteMessage(interaction, content, ephemeral = false) {
         if (!ephemeral && message) {
             setTimeout(async () => {
                 try {
-                    await message.delete().catch(() => {});
+                    await message.delete().catch(() => { });
                 } catch (error) {
                     // Silently fail - message might already be deleted
                 }
@@ -46,10 +46,10 @@ async function sendAutoDeleteMessage(interaction, content, ephemeral = false) {
  */
 async function handleRestockButtonClick(interaction, region) {
     try {
-        const channelId = region === 'va' 
+        const channelId = region === 'va'
             ? config.commandChannels.restock_in_progress_va
             : config.commandChannels.restock_in_progress_md;
-        
+
         // Test channel exception: 1435130632320712844
         const testChannelId = '1435130632320712844';
         if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
@@ -93,10 +93,10 @@ async function handleRestockButtonClick(interaction, region) {
  */
 async function handlePastRestockButtonClick(interaction, region) {
     try {
-        const channelId = region === 'va' 
+        const channelId = region === 'va'
             ? config.commandChannels.report_past_restock_va
             : config.commandChannels.report_past_restock_md;
-        
+
         // Test channel exception: 1435130632320712844
         const testChannelId = '1435130632320712844';
         if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
@@ -140,11 +140,11 @@ async function handlePastRestockButtonClick(interaction, region) {
 async function handleStoreTypeSelect(interaction, region) {
     try {
         const storeType = interaction.values[0];
-        
+
         // Handle "Other" option - show modal for custom store name and location
         if (storeType === 'other') {
             const sessionId = generateModalId();
-            
+
             // Store session data
             modalDataCache.set(sessionId, {
                 userId: interaction.user.id,
@@ -153,7 +153,7 @@ async function handleStoreTypeSelect(interaction, region) {
                 storeType: 'other',
                 timestamp: Date.now()
             });
-            
+
             // Show modal for custom store name and location
             const modal = new ModalBuilder()
                 .setCustomId(`custom_store_name_in_progress_${region}_${sessionId}`)
@@ -183,7 +183,7 @@ async function handleStoreTypeSelect(interaction, region) {
             await interaction.showModal(modal);
             return;
         }
-        
+
         let stores = [];
         if (storeType === 'target') {
             stores = config.stores.target[region] || [];
@@ -246,7 +246,7 @@ async function handleStoreTypeSelect(interaction, region) {
 async function handlePastRestockStoreTypeSelect(interaction, region) {
     try {
         const storeType = interaction.values[0];
-        
+
         let stores = [];
         if (storeType === 'target') {
             stores = config.stores.target[region] || [];
@@ -311,7 +311,7 @@ async function handleLocationSelect(interaction, region) {
         const customId = interaction.customId;
         const storeType = customId.replace(`restock_location_${region}_`, '');
         const store = interaction.values[0];
-        
+
         const userId = interaction.user.id;
         const username = interaction.user.username;
 
@@ -347,10 +347,10 @@ async function handleLocationSelect(interaction, region) {
                 { name: '🏪 Store', value: store, inline: false },
                 { name: '📅 Type', value: 'Restock In Progress', inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
-                { 
-                    name: '🚨 Warning', 
-                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
-                    inline: false 
+                {
+                    name: '🚨 Warning',
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.',
+                    inline: false
                 }
             )
             .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
@@ -400,7 +400,7 @@ async function handlePastRestockLocationSelect(interaction, region) {
 
         // Generate a short ID for tracking (Discord customId limit is 100 chars)
         const sessionId = generateModalId();
-        
+
         // Store the store info temporarily in cache (expires after 5 minutes)
         modalDataCache.set(sessionId, {
             store: store,
@@ -501,15 +501,15 @@ async function handlePastRestockDateSelect(interaction, region) {
             .setTitle('⚠️ Confirm Past Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: formattedStore, inline: false },
+                { name: '🏪 Store', value: store, inline: false },
                 { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
                 { name: '📝 Date Input', value: dateInput, inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
                 { name: 'ℹ️ Note', value: 'This will be logged only (no public alert)', inline: false },
-                { 
-                    name: '🚨 Warning', 
-                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
-                    inline: false 
+                {
+                    name: '🚨 Warning',
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.',
+                    inline: false
                 }
             )
             .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
@@ -617,7 +617,7 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
 
         const approveButtonId = `approve_${restockId}`;
         const rejectButtonId = `reject_${restockId}`;
-        
+
         const approvalRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -635,8 +635,8 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
             );
 
         // Determine approval channel based on region
-        const approvalChannelId = region === 'md' 
-            ? config.channels.restockApprovalsMD 
+        const approvalChannelId = region === 'md'
+            ? config.channels.restockApprovalsMD
             : config.channels.restockApprovals;
 
         try {
@@ -647,7 +647,7 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
                     const { getAdminMentions } = require('./approvalManager');
                     const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
+
                     await approvalChannel.send({
                         content: mentionText,
                         embeds: [approvalEmbed],
@@ -679,7 +679,7 @@ async function handlePastRestockDateSubmit(interaction, region) {
 
         const customId = interaction.customId;
         const sessionId = customId.replace(`past_restock_date_${region}_`, '');
-        
+
         // Retrieve store info from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
@@ -699,7 +699,7 @@ async function handlePastRestockDateSubmit(interaction, region) {
 
         const store = cachedData.store;
         const storeType = cachedData.storeType;
-        
+
         const dateInput = interaction.fields.getTextInputValue('restock_date');
         const userId = interaction.user.id;
         const username = interaction.user.username;
@@ -755,10 +755,10 @@ async function handlePastRestockDateSubmit(interaction, region) {
  */
 async function handleUpcomingRestockButtonClick(interaction, region) {
     try {
-        const channelId = region === 'va' 
+        const channelId = region === 'va'
             ? config.commandChannels.restock_in_progress_va
             : config.commandChannels.restock_in_progress_md;
-        
+
         // Test channel exception: 1435130632320712844
         const testChannelId = '1435130632320712844';
         if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
@@ -803,11 +803,11 @@ async function handleUpcomingRestockButtonClick(interaction, region) {
 async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
     try {
         const storeType = interaction.values[0];
-        
+
         // Handle "Other" option - show modal for custom store name and location
         if (storeType === 'other') {
             const sessionId = generateModalId();
-            
+
             // Store session data
             modalDataCache.set(sessionId, {
                 userId: interaction.user.id,
@@ -816,7 +816,7 @@ async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
                 storeType: 'other',
                 timestamp: Date.now()
             });
-            
+
             // Show modal for custom store name and location
             const modal = new ModalBuilder()
                 .setCustomId(`custom_store_name_upcoming_${region}_${sessionId}`)
@@ -846,7 +846,7 @@ async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
             await interaction.showModal(modal);
             return;
         }
-        
+
         let stores = [];
         if (storeType === 'target') {
             stores = config.stores.target[region] || [];
@@ -914,7 +914,7 @@ async function handleUpcomingRestockLocationSelect(interaction, region) {
 
         // Generate a short ID for tracking (Discord customId limit is 100 chars)
         const sessionId = generateModalId();
-        
+
         // Store the store info temporarily in cache (expires after 5 minutes)
         modalDataCache.set(sessionId, {
             store: store,
@@ -1046,7 +1046,7 @@ async function handleUpcomingRestockNoteSubmit(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.replace(`upcoming_restock_note_${region}_`, '');
-        
+
         // Retrieve store info from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
@@ -1082,16 +1082,16 @@ async function handleUpcomingRestockNoteSubmit(interaction, region) {
             .setTitle('⚠️ Confirm Upcoming Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: formattedStore, inline: false },
+                { name: '🏪 Store', value: store, inline: false },
                 { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
                 { name: '📝 Date Input', value: dateInput, inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
                 { name: '📋 What Will Restock', value: note || 'No note provided', inline: false },
                 { name: 'ℹ️ Note', value: 'This will be logged only (no public alert)', inline: false },
-                { 
-                    name: '🚨 Warning', 
-                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
-                    inline: false 
+                {
+                    name: '🚨 Warning',
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.',
+                    inline: false
                 }
             )
             .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
@@ -1201,7 +1201,7 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
 
         const approveButtonId = `approve_${restockId}`;
         const rejectButtonId = `reject_${restockId}`;
-        
+
         const approvalRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -1219,8 +1219,8 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
             );
 
         // Determine approval channel based on region
-        const approvalChannelId = region === 'md' 
-            ? config.channels.restockApprovalsMD 
+        const approvalChannelId = region === 'md'
+            ? config.channels.restockApprovalsMD
             : config.channels.restockApprovals;
 
         try {
@@ -1231,7 +1231,7 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
                     const { getAdminMentions } = require('./approvalManager');
                     const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
+
                     await approvalChannel.send({
                         content: mentionText,
                         embeds: [approvalEmbed],
@@ -1261,7 +1261,7 @@ async function handleCustomStoreNameInProgress(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.split('_').pop();
-        
+
         // Retrieve session data from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
@@ -1281,14 +1281,14 @@ async function handleCustomStoreNameInProgress(interaction, region) {
 
         const storeName = interaction.fields.getTextInputValue('custom_store_name').trim();
         const storeLocation = interaction.fields.getTextInputValue('custom_store_location').trim();
-        
+
         if (!storeName) {
             return await interaction.reply({
                 content: '❌ Store name cannot be empty.',
                 ephemeral: true
             });
         }
-        
+
         if (!storeLocation) {
             return await interaction.reply({
                 content: '❌ Store location cannot be empty.',
@@ -1315,10 +1315,10 @@ async function handleCustomStoreNameInProgress(interaction, region) {
                 { name: '🏪 Store', value: formattedStore, inline: false },
                 { name: '📅 Type', value: 'Restock In Progress', inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
-                { 
-                    name: '🚨 Warning', 
-                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
-                    inline: false 
+                {
+                    name: '🚨 Warning',
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.',
+                    inline: false
                 }
             )
             .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
@@ -1364,7 +1364,7 @@ async function handleCustomStoreNameUpcoming(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.split('_').pop();
-        
+
         // Retrieve session data from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
@@ -1384,14 +1384,14 @@ async function handleCustomStoreNameUpcoming(interaction, region) {
 
         const storeName = interaction.fields.getTextInputValue('custom_store_name').trim();
         const storeLocation = interaction.fields.getTextInputValue('custom_store_location').trim();
-        
+
         if (!storeName) {
             return await interaction.reply({
                 content: '❌ Store name cannot be empty.',
                 ephemeral: true
             });
         }
-        
+
         if (!storeLocation) {
             return await interaction.reply({
                 content: '❌ Store location cannot be empty.',
@@ -1455,11 +1455,11 @@ async function checkCooldowns(userId, store) {
     const now = new Date();
 
     const restocks = dataManager.getRestocks();
-    const pendingReport = restocks.find(r => 
-        r.store === store && 
+    const pendingReport = restocks.find(r =>
+        r.store === store &&
         r.status === 'pending'
     );
-    
+
     if (pendingReport) {
         return {
             allowed: false,
@@ -1572,7 +1572,7 @@ async function handleLookupButtonClick(interaction, region) {
         let fieldCount = 0;
         for (const storeData of regionRestocks) {
             if (fieldCount >= 25) break; // Discord limit
-            
+
             try {
                 let currentWeekDate = 'Not Restocked';
                 if (storeData.current_week_restock_date) {
@@ -1581,7 +1581,7 @@ async function handleLookupButtonClick(interaction, region) {
                         currentWeekDate = `<t:${Math.floor(date.getTime() / 1000)}:R>`;
                     }
                 }
-                
+
                 let previousWeekDate = 'N/A';
                 if (storeData.previous_week_restock_date) {
                     const date = new Date(storeData.previous_week_restock_date);
@@ -1645,7 +1645,7 @@ async function handleConfirmInProgress(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.replace(`confirm_in_progress_${region}_`, '');
-        
+
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData || cachedData.userId !== interaction.user.id) {
             return await interaction.update({
@@ -1720,7 +1720,7 @@ async function handleConfirmInProgress(interaction, region) {
 
         const approveButtonId = `approve_${restockId}`;
         const rejectButtonId = `reject_${restockId}`;
-        
+
         const approvalRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -1738,8 +1738,8 @@ async function handleConfirmInProgress(interaction, region) {
             );
 
         // Determine approval channel based on region
-        const approvalChannelId = region === 'md' 
-            ? config.channels.restockApprovalsMD 
+        const approvalChannelId = region === 'md'
+            ? config.channels.restockApprovalsMD
             : config.channels.restockApprovals;
 
         try {
@@ -1750,7 +1750,7 @@ async function handleConfirmInProgress(interaction, region) {
                     const { getAdminMentions } = require('./approvalManager');
                     const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
+
                     await approvalChannel.send({
                         content: mentionText,
                         embeds: [approvalEmbed],
@@ -1816,11 +1816,15 @@ async function handleConfirmInProgress(interaction, region) {
         }
     }
 }
+
+/**
+ * Handle confirmation for past restock
+ */
 async function handleConfirmPast(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.replace(`confirm_past_${region}_`, '');
-        
+
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData || cachedData.userId !== interaction.user.id) {
             return await interaction.update({
@@ -1858,7 +1862,7 @@ async function handleConfirmUpcoming(interaction, region) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.replace(`confirm_upcoming_${region}_`, '');
-        
+
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData || cachedData.userId !== interaction.user.id) {
             return await interaction.update({
@@ -1897,7 +1901,7 @@ async function handleCancelReport(interaction) {
     try {
         const customId = interaction.customId;
         const sessionId = customId.replace('cancel_report_', '');
-        
+
         // Clean up cache
         modalDataCache.delete(sessionId);
 
