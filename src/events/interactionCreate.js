@@ -59,10 +59,11 @@ module.exports = {
 
         // Handle button interactions (for approval workflow)
         if (interaction.isButton()) {
-            const { customId } = interaction;
+            try {
+                const { customId } = interaction;
 
-            // Approve with note MUST be checked first so it doesn't fall into the generic approve_ handler
-            if (customId.startsWith('approve_note_')) {
+                // Approve with note MUST be checked first so it doesn't fall into the generic approve_ handler
+                if (customId.startsWith('approve_note_')) {
                 const { showApproveWithNoteModal } = require('../utils/approvalManager');
                 await showApproveWithNoteModal(interaction);
                 return;
@@ -168,7 +169,71 @@ module.exports = {
                 await adminHandlers.handleAdminButtonClick(interaction);
                 return;
             }
+
+            // Handle config setup buttons
+            if (customId.startsWith('admin_config_')) {
+                const configHandlers = require('../utils/configSetupHandler');
+                
+                if (customId === 'admin_config_quick_setup') {
+                    await configHandlers.handleQuickSetupSelect(interaction);
+                    return;
+                }
+
+                if (customId.startsWith('admin_config_channel_')) {
+                    await configHandlers.handleConfigChannelSubmit(interaction);
+                    return;
+                }
+
+                if (customId.startsWith('admin_config_role_')) {
+                    await configHandlers.handleConfigRoleSubmit(interaction);
+                    return;
+                }
+
+                if (customId === 'admin_config_essential_channels') {
+                    await configHandlers.handleEssentialChannelsSubmit(interaction);
+                    return;
+                }
+
+                if (customId === 'admin_config_essential_roles') {
+                    await configHandlers.handleEssentialRolesSubmit(interaction);
+                    return;
+                }
+            }
+
+            // If we get here, the button wasn't handled
+            console.warn(`⚠️ Unhandled button interaction: ${customId}`);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ This button is not yet implemented or there was an error processing it.',
+                    ephemeral: true
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error handling button interaction:', error);
+            console.error('Button customId:', interaction.customId);
+            console.error('Error stack:', error.stack);
+            
+            if (!interaction.replied && !interaction.deferred) {
+                try {
+                    await interaction.reply({
+                        content: '❌ There was an error processing this button. Please try again.',
+                        ephemeral: true
+                    });
+                } catch (replyError) {
+                    console.error('❌ Error sending error reply:', replyError);
+                }
+            } else if (interaction.deferred && !interaction.replied) {
+                try {
+                    await interaction.editReply({
+                        content: '❌ There was an error processing this button. Please try again.'
+                    });
+                } catch (editError) {
+                    console.error('❌ Error sending error edit:', editError);
+                }
+            }
         }
+        return;
+    }
 
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
