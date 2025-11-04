@@ -10,16 +10,16 @@ const modalDataCache = new Map();
  */
 function formatRestockDate(dateString) {
     if (!dateString) return null;
-    
+
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return null;
-    
+
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[date.getDay()];
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const year = String(date.getFullYear()).slice(-2);
-    
+
     return `${dayName} ${month}/${day}/${year}`;
 }
 
@@ -682,6 +682,18 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
             ephemeral: true
         });
 
+        // Auto-dismiss after 3 seconds
+        setTimeout(async () => {
+            try {
+                await interaction.editReply({
+                    content: '✅ **Submitted!**',
+                    components: []
+                });
+            } catch (error) {
+                // Silently fail - interaction might be expired
+            }
+        }, 3000);
+
     } catch (error) {
         console.error(`❌ Error processing past restock submission (${region}):`, error);
         throw error;
@@ -1266,6 +1278,18 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
             ephemeral: true
         });
 
+        // Auto-dismiss after 3 seconds
+        setTimeout(async () => {
+            try {
+                await interaction.editReply({
+                    content: '✅ **Submitted!**',
+                    components: []
+                });
+            } catch (error) {
+                // Silently fail - interaction might be expired
+            }
+        }, 3000);
+
     } catch (error) {
         console.error(`❌ Error processing upcoming restock submission (${region}):`, error);
         throw error;
@@ -1592,11 +1616,11 @@ async function handleLookupButtonClick(interaction, region) {
             if (fieldCount >= 25) break; // Discord limit
 
             try {
-                const currentWeekDate = storeData.current_week_restock_date 
+                const currentWeekDate = storeData.current_week_restock_date
                     ? formatRestockDate(storeData.current_week_restock_date)
                     : 'Not Restocked';
-                
-                const previousWeekDate = storeData.previous_week_restock_date 
+
+                const previousWeekDate = storeData.previous_week_restock_date
                     ? formatRestockDate(storeData.previous_week_restock_date)
                     : 'N/A';
 
@@ -1791,6 +1815,18 @@ async function handleConfirmInProgress(interaction, region) {
                 components: [],
                 ephemeral: true
             });
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(async () => {
+                try {
+                    await interaction.editReply({
+                        content: '✅ **Submitted!**',
+                        components: []
+                    });
+                } catch (error) {
+                    // Silently fail - interaction might be expired or already updated
+                }
+            }, 3000);
         } catch (updateError) {
             console.error('❌ Error updating interaction:', updateError);
             // If update fails, try to reply instead
