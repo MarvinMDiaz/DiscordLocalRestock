@@ -1574,21 +1574,13 @@ async function handleLookupButtonClick(interaction, region) {
             if (fieldCount >= 25) break; // Discord limit
 
             try {
-                let currentWeekDate = 'Not Restocked';
-                if (storeData.current_week_restock_date) {
-                    const date = new Date(storeData.current_week_restock_date);
-                    if (!isNaN(date.getTime())) {
-                        currentWeekDate = `<t:${Math.floor(date.getTime() / 1000)}:R>`;
-                    }
-                }
-
-                let previousWeekDate = 'N/A';
-                if (storeData.previous_week_restock_date) {
-                    const date = new Date(storeData.previous_week_restock_date);
-                    if (!isNaN(date.getTime())) {
-                        previousWeekDate = `<t:${Math.floor(date.getTime() / 1000)}:R>`;
-                    }
-                }
+                const currentWeekDate = storeData.current_week_restock_date 
+                    ? formatRestockDate(storeData.current_week_restock_date)
+                    : 'Not Restocked';
+                
+                const previousWeekDate = storeData.previous_week_restock_date 
+                    ? formatRestockDate(storeData.previous_week_restock_date)
+                    : 'N/A';
 
                 const storeName = storeData.store || 'Unknown Store';
                 const fieldValue = `**Current Week Restock Date:** ${currentWeekDate}\n**Previous Week Restock Date:** ${previousWeekDate}`;
