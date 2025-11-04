@@ -64,111 +64,111 @@ module.exports = {
 
                 // Approve with note MUST be checked first so it doesn't fall into the generic approve_ handler
                 if (customId.startsWith('approve_note_')) {
-                const { showApproveWithNoteModal } = require('../utils/approvalManager');
-                await showApproveWithNoteModal(interaction);
-                return;
-            }
+                    const { showApproveWithNoteModal } = require('../utils/approvalManager');
+                    await showApproveWithNoteModal(interaction);
+                    return;
+                }
 
-            if (customId.startsWith('approve_') || customId.startsWith('reject_')) {
-                // This will be handled by the approval manager
-                const { handleApprovalButton } = require('../utils/approvalManager');
-                await handleApprovalButton(interaction);
-                return;
-            }
+                if (customId.startsWith('approve_') || customId.startsWith('reject_')) {
+                    // This will be handled by the approval manager
+                    const { handleApprovalButton } = require('../utils/approvalManager');
+                    await handleApprovalButton(interaction);
+                    return;
+                }
 
-            // Handle button-based restock reporting
-            const buttonHandlers = require('../utils/buttonRestockHandler');
-            
-            if (customId === 'report_restock_button_va') {
-                await buttonHandlers.handleRestockButtonClick(interaction, 'va');
-                return;
-            }
-            
-            if (customId === 'report_restock_button_md') {
-                await buttonHandlers.handleRestockButtonClick(interaction, 'md');
-                return;
-            }
-            
-            if (customId === 'report_past_restock_button_va') {
-                await buttonHandlers.handlePastRestockButtonClick(interaction, 'va');
-                return;
-            }
-            
-            if (customId === 'report_past_restock_button_md') {
-                await buttonHandlers.handlePastRestockButtonClick(interaction, 'md');
-                return;
-            }
-            
-            if (customId === 'report_upcoming_restock_button_va') {
-                await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'va');
-                return;
-            }
-            
-            if (customId === 'report_upcoming_restock_button_md') {
-                await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'md');
-                return;
-            }
-            
-            // Handle lookup button clicks
-            if (customId === 'lookup_restocks_button_va') {
-                await buttonHandlers.handleLookupButtonClick(interaction, 'va');
-                return;
-            }
-            
-            if (customId === 'lookup_restocks_button_md') {
-                await buttonHandlers.handleLookupButtonClick(interaction, 'md');
-                return;
-            }
-
-            // Handle confirmation buttons
-            if (customId.startsWith('confirm_in_progress_va_')) {
-                await buttonHandlers.handleConfirmInProgress(interaction, 'va');
-                return;
-            }
-            
-            if (customId.startsWith('confirm_in_progress_md_')) {
-                await buttonHandlers.handleConfirmInProgress(interaction, 'md');
-                return;
-            }
-
-            if (customId.startsWith('confirm_past_va_')) {
-                await buttonHandlers.handleConfirmPast(interaction, 'va');
-                return;
-            }
-            
-            if (customId.startsWith('confirm_past_md_')) {
-                await buttonHandlers.handleConfirmPast(interaction, 'md');
-                return;
-            }
-
-            if (customId.startsWith('confirm_upcoming_va_')) {
-                await buttonHandlers.handleConfirmUpcoming(interaction, 'va');
-                return;
-            }
-            
-            if (customId.startsWith('confirm_upcoming_md_')) {
-                await buttonHandlers.handleConfirmUpcoming(interaction, 'md');
-                return;
-            }
-
-            // Handle cancel button
-            if (customId.startsWith('cancel_report_')) {
-                await buttonHandlers.handleCancelReport(interaction);
-                return;
-            }
-            
-            // Handle admin control panel buttons
-            if (customId.startsWith('admin_')) {
-                const adminHandlers = require('../utils/adminButtonHandler');
+                // Handle button-based restock reporting
+                const buttonHandlers = require('../utils/buttonRestockHandler');
                 
-                if (customId === 'admin_remove_cooldown_store_type' || customId.startsWith('admin_remove_cooldown_location_')) {
-                    // These are handled separately below
+                if (customId === 'report_restock_button_va') {
+                    await buttonHandlers.handleRestockButtonClick(interaction, 'va');
                     return;
                 }
                 
-                await adminHandlers.handleAdminButtonClick(interaction);
-                return;
-            }
+                if (customId === 'report_restock_button_md') {
+                    await buttonHandlers.handleRestockButtonClick(interaction, 'md');
+                    return;
+                }
+                
+                if (customId === 'report_past_restock_button_va') {
+                    await buttonHandlers.handlePastRestockButtonClick(interaction, 'va');
+                    return;
+                }
+                
+                if (customId === 'report_past_restock_button_md') {
+                    await buttonHandlers.handlePastRestockButtonClick(interaction, 'md');
+                    return;
+                }
+                
+                if (customId === 'report_upcoming_restock_button_va') {
+                    await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'va');
+                    return;
+                }
+                
+                if (customId === 'report_upcoming_restock_button_md') {
+                    await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'md');
+                    return;
+                }
+                
+                // Handle lookup button clicks
+                if (customId === 'lookup_restocks_button_va') {
+                    await buttonHandlers.handleLookupButtonClick(interaction, 'va');
+                    return;
+                }
+                
+                if (customId === 'lookup_restocks_button_md') {
+                    await buttonHandlers.handleLookupButtonClick(interaction, 'md');
+                    return;
+                }
+
+                // Handle confirmation buttons
+                if (customId.startsWith('confirm_in_progress_va_')) {
+                    await buttonHandlers.handleConfirmInProgress(interaction, 'va');
+                    return;
+                }
+                
+                if (customId.startsWith('confirm_in_progress_md_')) {
+                    await buttonHandlers.handleConfirmInProgress(interaction, 'md');
+                    return;
+                }
+
+                if (customId.startsWith('confirm_past_va_')) {
+                    await buttonHandlers.handleConfirmPast(interaction, 'va');
+                    return;
+                }
+                
+                if (customId.startsWith('confirm_past_md_')) {
+                    await buttonHandlers.handleConfirmPast(interaction, 'md');
+                    return;
+                }
+
+                if (customId.startsWith('confirm_upcoming_va_')) {
+                    await buttonHandlers.handleConfirmUpcoming(interaction, 'va');
+                    return;
+                }
+                
+                if (customId.startsWith('confirm_upcoming_md_')) {
+                    await buttonHandlers.handleConfirmUpcoming(interaction, 'md');
+                    return;
+                }
+
+                // Handle cancel button
+                if (customId.startsWith('cancel_report_')) {
+                    await buttonHandlers.handleCancelReport(interaction);
+                    return;
+                }
+                
+                // Handle admin control panel buttons
+                if (customId.startsWith('admin_')) {
+                    const adminHandlers = require('../utils/adminButtonHandler');
+                    
+                    if (customId === 'admin_remove_cooldown_store_type' || customId.startsWith('admin_remove_cooldown_location_')) {
+                        // These are handled separately below
+                        return;
+                    }
+                    
+                    await adminHandlers.handleAdminButtonClick(interaction);
+                    return;
+                }
 
             // Handle config setup buttons
             if (customId.startsWith('admin_config_')) {
