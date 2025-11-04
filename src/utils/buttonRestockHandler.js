@@ -6,6 +6,24 @@ const config = require('../../config/config.json');
 const modalDataCache = new Map();
 
 /**
+ * Format date as "Day MM/DD/YY" (e.g., "Saturday 11/01/25")
+ */
+function formatRestockDate(dateString) {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[date.getDay()];
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    
+    return `${dayName} ${month}/${day}/${year}`;
+}
+
+/**
  * Generate a short ID for modal customId
  */
 function generateModalId() {
