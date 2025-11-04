@@ -1769,15 +1769,54 @@ async function handleConfirmInProgress(interaction, region) {
             ephemeral: true
         });
 
-    } catch (error) {
-        console.error('❌ Error confirming in-progress restock:', error);
-        await interaction.update({
-            content: '❌ There was an error submitting your report. Please try again.',
-            components: [],
-            ephemeral: true
-        });
-    }
-}
+        // Determine approval channel based on region
+        const approvalChannelId = region === 'md' 
+            ? config.channels.restockApprovalsMD 
+            : config.channels.restockApprovals;
+
+        let approvalSent = false;
+        try {
+            if (approvalChannelId && approvalChannelId.trim() !== '') {
+                const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
+                if (approvalChannel) {
+                    // Get admin mentions with region
+                    const { getAdminMentions } = require('./approvalManager');
+                    const adminMentions = await getAdminMentions(region);
+                    const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
+                    
+                    await approvalChannel.send({
+                        content: mentionText,
+                        embeds: [approvalEmbed],
+                        components: [approvalRow]
+                    });
+                    approvalSent = true;
+                }
+            }
+        } catch (sendErr) {
+            console.error('⚠️ Could not send to approval channel:', sendErr.message);
+        }
+
+        // Update interaction with success message (always update, even if approval channel send failed)
+        try {
+            await interaction.update({
+                content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted${approvalSent ? ' and is awaiting moderator approval' : ' (approval channel may be misconfigured)'}.`,
+                components: [],
+                ephemeral: true
+            });
+        } catch (updateError) {
+            console.error('❌ Error updating interaction:', updateError);
+            // If update fails, try to reply instead
+            if (!interaction.replied && !interaction.deferred) {
+                try {
+                    await interaction.reply({
+                        content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting moderator approval.`,
+                        ephemeral: true
+                    });
+                } catch (replyError) {
+                    console.error('❌ Error replying to interaction:', replyError);
+                }
+            }
+        }
 
 /**
  * Handle confirmation for past restock
