@@ -1762,6 +1762,13 @@ async function handleConfirmInProgress(interaction, region) {
             console.error('⚠️ Could not send to approval channel:', sendErr.message);
         }
 
+        // Update interaction with success message
+        await interaction.update({
+            content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting moderator approval.`,
+            components: [],
+            ephemeral: true
+        });
+
     } catch (error) {
         console.error('❌ Error confirming in-progress restock:', error);
         await interaction.update({
