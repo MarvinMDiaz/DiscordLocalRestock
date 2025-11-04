@@ -1762,41 +1762,19 @@ async function handleConfirmInProgress(interaction, region) {
             console.error('⚠️ Could not send to approval channel:', sendErr.message);
         }
 
-        // Update interaction with success message
-        await interaction.update({
-            content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting moderator approval.`,
-            components: [],
-            ephemeral: true
-        });
-
-        // Determine approval channel based on region
-        const approvalChannelId = region === 'md' 
-            ? config.channels.restockApprovalsMD 
-            : config.channels.restockApprovals;
-
+        // Update interaction with success message (always update, even if approval channel send failed)
         let approvalSent = false;
         try {
             if (approvalChannelId && approvalChannelId.trim() !== '') {
                 const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
                 if (approvalChannel) {
-                    // Get admin mentions with region
-                    const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions(region);
-                    const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
-                    await approvalChannel.send({
-                        content: mentionText,
-                        embeds: [approvalEmbed],
-                        components: [approvalRow]
-                    });
                     approvalSent = true;
                 }
             }
-        } catch (sendErr) {
-            console.error('⚠️ Could not send to approval channel:', sendErr.message);
+        } catch (checkErr) {
+            console.error('⚠️ Error checking approval channel:', checkErr.message);
         }
 
-        // Update interaction with success message (always update, even if approval channel send failed)
         try {
             await interaction.update({
                 content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted${approvalSent ? ' and is awaiting moderator approval' : ' (approval channel may be misconfigured)'}.`,
@@ -1818,9 +1796,26 @@ async function handleConfirmInProgress(interaction, region) {
             }
         }
 
-/**
- * Handle confirmation for past restock
- */
+    } catch (error) {
+        console.error('❌ Error confirming in-progress restock:', error);
+        console.error('Error stack:', error.stack);
+        try {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.update({
+                    content: '❌ There was an error submitting your report. Please try again.',
+                    components: [],
+                    ephemeral: true
+                });
+            } else if (interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ There was an error submitting your report. Please try again.'
+                });
+            }
+        } catch (updateError) {
+            console.error('❌ Error updating interaction in error handler:', updateError);
+        }
+    }
+}
 async function handleConfirmPast(interaction, region) {
     try {
         const customId = interaction.customId;
