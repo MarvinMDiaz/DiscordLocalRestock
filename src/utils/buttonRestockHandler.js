@@ -344,7 +344,7 @@ async function handleLocationSelect(interaction, region) {
             .setTitle('⚠️ Confirm Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: formattedStore, inline: false },
+                { name: '🏪 Store', value: store, inline: false },
                 { name: '📅 Type', value: 'Restock In Progress', inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
                 { 
