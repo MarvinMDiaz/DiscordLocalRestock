@@ -4,11 +4,11 @@
   "channels": {
     "_comment": "Main channel IDs for restock alerts and approvals",
     "restockApprovals": "1434298657158467796",
-    "_restockApprovals_note": "Channel where approval messages with buttons are posted (VA + MD)",
+    "_restockApprovals_note": "Channel where VA approval messages with buttons are posted",
+    "restockApprovalsMD": "1435134742298099752",
+    "_restockApprovalsMD_note": "Channel where MD approval messages with buttons are posted",
     "localRestockVA": "1434306702416674816",
     "_localRestockVA_note": "Public channel for VA restock alerts (where approved alerts are posted)",
-    "restockApprovalsMD": "1399814290378068128",
-    "_restockApprovalsMD_note": "MD approval channel (can be same as restockApprovals for combined approvals)",
     "localRestockMD": "1434306760268714146",
     "_localRestockMD_note": "Public channel for MD restock alerts (where approved alerts are posted)",
     "weeklyReportVA": "1434306888589377586",
@@ -48,6 +48,12 @@
   },
   "roles": {
     "_comment": "Discord role IDs for mentions and permissions",
+    "admin": "1434311087892725891",
+    "_admin_note": "Role required to use admin commands (also requires Administrator permission)",
+    "restockApprovalVA": "1434311087892725891",
+    "_restockApprovalVA_note": "Role mentioned when VA approval requests are posted",
+    "restockApprovalMD": "1435135209820393612",
+    "_restockApprovalMD_note": "Role mentioned when MD approval requests are posted",
     "localRestockVA": "1434311225835130960",
     "_localRestockVA_note": "Role mentioned when VA restock alerts are posted",
     "localRestockMD": "1434311532191420466",
@@ -55,9 +61,7 @@
     "weeklyReportVA": "1434311999939940506",
     "_weeklyReportVA_note": "Role mentioned when VA weekly recap reports are posted",
     "weeklyReportMD": "1434312077052350464",
-    "_weeklyReportMD_note": "Role mentioned when MD weekly recap reports are posted",
-    "admin": "1434311087892725891",
-    "_admin_note": "Role required to use /admin_clear_restocks command (also requires Administrator permission)"
+    "_weeklyReportMD_note": "Role mentioned when MD weekly recap reports are posted"
   },
   "stores": {
     "_comment": "Store lists organized by store type and region",

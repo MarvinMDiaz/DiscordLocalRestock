@@ -4,27 +4,27 @@ const configManager = require('./configManager');
 
 /**
  * Get admin role mentions for approval notifications
+ * @param {string} region - 'va' or 'md' to determine which approval role to mention
  */
-async function getAdminMentions() {
+async function getAdminMentions(region = 'va') {
     try {
-        const roles = await configManager.getAdminRoles();
-        const mentions = [];
+        const config = require('../../config/config.json');
         
-        // Add main admin role
-        if (roles.admin) {
-            mentions.push(`<@&${roles.admin}>`);
+        // Use region-specific approval role
+        const roleId = region === 'md' 
+            ? config.roles.restockApprovalMD 
+            : config.roles.restockApprovalVA;
+        
+        if (roleId) {
+            return `<@&${roleId}>`;
         }
         
-        // Add custom admin roles
-        if (roles.custom_admins && Array.isArray(roles.custom_admins)) {
-            roles.custom_admins.forEach(role => {
-                if (role.id) {
-                    mentions.push(`<@&${role.id}>`);
-                }
-            });
+        // Fallback to admin role if approval role not set
+        if (config.roles.admin) {
+            return `<@&${config.roles.admin}>`;
         }
         
-        return mentions.length > 0 ? mentions.join(' ') : '';
+        return '';
     } catch (error) {
         console.error('Error getting admin mentions:', error);
         return '';

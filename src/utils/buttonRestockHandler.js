@@ -634,15 +634,18 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannelId = config.channels.restockApprovals;
+        // Determine approval channel based on region
+        const approvalChannelId = region === 'md' 
+            ? config.channels.restockApprovalsMD 
+            : config.channels.restockApprovals;
 
         try {
             if (approvalChannelId && approvalChannelId.trim() !== '') {
                 const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
                 if (approvalChannel) {
-                    // Get admin mentions
+                    // Get admin mentions with region
                     const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions();
+                    const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
                     
                     await approvalChannel.send({
@@ -1215,17 +1218,18 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannelId = region === 'va' 
-            ? config.channels.restockApprovals
-            : config.channels.restockApprovalsMD || config.channels.restockApprovals;
+        // Determine approval channel based on region
+        const approvalChannelId = region === 'md' 
+            ? config.channels.restockApprovalsMD 
+            : config.channels.restockApprovals;
 
         try {
             if (approvalChannelId && approvalChannelId.trim() !== '') {
                 const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
                 if (approvalChannel) {
-                    // Get admin mentions
+                    // Get admin mentions with region
                     const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions();
+                    const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
                     
                     await approvalChannel.send({
@@ -1733,14 +1737,18 @@ async function handleConfirmInProgress(interaction, region) {
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannelId = config.channels.restockApprovals;
+        // Determine approval channel based on region
+        const approvalChannelId = region === 'md' 
+            ? config.channels.restockApprovalsMD 
+            : config.channels.restockApprovals;
 
         try {
             if (approvalChannelId && approvalChannelId.trim() !== '') {
                 const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
                 if (approvalChannel) {
+                    // Get admin mentions with region
                     const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions();
+                    const adminMentions = await getAdminMentions(region);
                     const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
                     
                     await approvalChannel.send({
@@ -1753,12 +1761,6 @@ async function handleConfirmInProgress(interaction, region) {
         } catch (sendErr) {
             console.error('⚠️ Could not send to approval channel:', sendErr.message);
         }
-
-        await interaction.update({
-            content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting moderator approval.`,
-            components: [],
-            ephemeral: true
-        });
 
     } catch (error) {
         console.error('❌ Error confirming in-progress restock:', error);
