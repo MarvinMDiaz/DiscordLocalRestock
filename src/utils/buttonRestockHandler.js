@@ -1816,9 +1816,10 @@ async function handleConfirmInProgress(interaction, region) {
                 ephemeral: true
             });
 
-            // Auto-dismiss after 3 seconds
+            // Auto-dismiss after 3 seconds - minimize to just checkmark
             setTimeout(async () => {
                 try {
+                    // Use editReply since we already updated
                     await interaction.editReply({
                         content: '✅ **Submitted!**',
                         components: []
