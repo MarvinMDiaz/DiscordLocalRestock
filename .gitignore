@@ -11,6 +11,11 @@ yarn-error.log*
 
 # Data files (optional - uncomment if you don't want to commit data)
 # data/restocks.json
+# Note: Railway uses persistent volumes, so data files are not committed
+# but are preserved in the Railway volume
+
+# Railway configuration (can be committed)
+# railway.toml
 
 # OS files
 .DS_Store
