@@ -141,7 +141,7 @@ async function handleStoreTypeSelect(interaction, region) {
     try {
         const storeType = interaction.values[0];
         
-        // Handle "Other" option - show modal for custom store name
+        // Handle "Other" option - show modal for custom store name and location
         if (storeType === 'other') {
             const sessionId = generateModalId();
             
@@ -154,10 +154,10 @@ async function handleStoreTypeSelect(interaction, region) {
                 timestamp: Date.now()
             });
             
-            // Show modal for custom store name (don't update first - show modal directly)
+            // Show modal for custom store name and location
             const modal = new ModalBuilder()
                 .setCustomId(`custom_store_name_in_progress_${region}_${sessionId}`)
-                .setTitle('Enter Custom Store Name');
+                .setTitle('Enter Custom Store Details');
 
             const storeNameInput = new TextInputBuilder()
                 .setCustomId('custom_store_name')
@@ -167,7 +167,18 @@ async function handleStoreTypeSelect(interaction, region) {
                 .setRequired(true)
                 .setMaxLength(100);
 
-            modal.addComponents(new ActionRowBuilder().addComponents(storeNameInput));
+            const storeLocationInput = new TextInputBuilder()
+                .setCustomId('custom_store_location')
+                .setLabel('Store Location/Address')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('e.g., City, State or Full Address')
+                .setRequired(true)
+                .setMaxLength(200);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(storeNameInput),
+                new ActionRowBuilder().addComponents(storeLocationInput)
+            );
 
             await interaction.showModal(modal);
             return;
@@ -333,7 +344,7 @@ async function handleLocationSelect(interaction, region) {
             .setTitle('⚠️ Confirm Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: false },
+                { name: '🏪 Store', value: formattedStore, inline: false },
                 { name: '📅 Type', value: 'Restock In Progress', inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
                 { 
@@ -490,7 +501,7 @@ async function handlePastRestockDateSelect(interaction, region) {
             .setTitle('⚠️ Confirm Past Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: false },
+                { name: '🏪 Store', value: formattedStore, inline: false },
                 { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
                 { name: '📝 Date Input', value: dateInput, inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
@@ -790,7 +801,7 @@ async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
     try {
         const storeType = interaction.values[0];
         
-        // Handle "Other" option - show modal for custom store name
+        // Handle "Other" option - show modal for custom store name and location
         if (storeType === 'other') {
             const sessionId = generateModalId();
             
@@ -803,10 +814,10 @@ async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
                 timestamp: Date.now()
             });
             
-            // Show modal for custom store name (don't update first - show modal directly)
+            // Show modal for custom store name and location
             const modal = new ModalBuilder()
                 .setCustomId(`custom_store_name_upcoming_${region}_${sessionId}`)
-                .setTitle('Enter Custom Store Name');
+                .setTitle('Enter Custom Store Details');
 
             const storeNameInput = new TextInputBuilder()
                 .setCustomId('custom_store_name')
@@ -816,7 +827,18 @@ async function handleUpcomingRestockStoreTypeSelect(interaction, region) {
                 .setRequired(true)
                 .setMaxLength(100);
 
-            modal.addComponents(new ActionRowBuilder().addComponents(storeNameInput));
+            const storeLocationInput = new TextInputBuilder()
+                .setCustomId('custom_store_location')
+                .setLabel('Store Location/Address')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('e.g., City, State or Full Address')
+                .setRequired(true)
+                .setMaxLength(200);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(storeNameInput),
+                new ActionRowBuilder().addComponents(storeLocationInput)
+            );
 
             await interaction.showModal(modal);
             return;
@@ -1057,7 +1079,7 @@ async function handleUpcomingRestockNoteSubmit(interaction, region) {
             .setTitle('⚠️ Confirm Upcoming Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: false },
+                { name: '🏪 Store', value: formattedStore, inline: false },
                 { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
                 { name: '📝 Date Input', value: dateInput, inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
@@ -1253,16 +1275,28 @@ async function handleCustomStoreNameInProgress(interaction, region) {
             });
         }
 
-        const store = interaction.fields.getTextInputValue('custom_store_name').trim();
-        if (!store) {
+        const storeName = interaction.fields.getTextInputValue('custom_store_name').trim();
+        const storeLocation = interaction.fields.getTextInputValue('custom_store_location').trim();
+        
+        if (!storeName) {
             return await interaction.reply({
                 content: '❌ Store name cannot be empty.',
                 ephemeral: true
             });
         }
+        
+        if (!storeLocation) {
+            return await interaction.reply({
+                content: '❌ Store location cannot be empty.',
+                ephemeral: true
+            });
+        }
 
-        // Update cache with the custom store name
-        cachedData.store = store;
+        // Format store: "Other - Store Name - Location"
+        const formattedStore = `Other - ${storeName} - ${storeLocation}`;
+
+        // Update cache with the formatted store
+        cachedData.store = formattedStore;
         cachedData.username = interaction.user.username;
         cachedData.reportType = 'in_progress';
         modalDataCache.set(sessionId, cachedData);
@@ -1274,7 +1308,7 @@ async function handleCustomStoreNameInProgress(interaction, region) {
             .setTitle('⚠️ Confirm Restock Report')
             .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: false },
+                { name: '🏪 Store', value: formattedStore, inline: false },
                 { name: '📅 Type', value: 'Restock In Progress', inline: true },
                 { name: '📍 Region', value: region.toUpperCase(), inline: true },
                 { 
@@ -1344,16 +1378,28 @@ async function handleCustomStoreNameUpcoming(interaction, region) {
             });
         }
 
-        const store = interaction.fields.getTextInputValue('custom_store_name').trim();
-        if (!store) {
+        const storeName = interaction.fields.getTextInputValue('custom_store_name').trim();
+        const storeLocation = interaction.fields.getTextInputValue('custom_store_location').trim();
+        
+        if (!storeName) {
             return await interaction.reply({
                 content: '❌ Store name cannot be empty.',
                 ephemeral: true
             });
         }
+        
+        if (!storeLocation) {
+            return await interaction.reply({
+                content: '❌ Store location cannot be empty.',
+                ephemeral: true
+            });
+        }
 
-        // Update cache with store name
-        cachedData.store = store;
+        // Format store: "Other - Store Name - Location"
+        const formattedStore = `Other - ${storeName} - ${storeLocation}`;
+
+        // Update cache with formatted store
+        cachedData.store = formattedStore;
         modalDataCache.set(sessionId, cachedData);
 
         // Show date selection dropdown (same as regular upcoming restock flow)
@@ -1374,7 +1420,7 @@ async function handleCustomStoreNameUpcoming(interaction, region) {
         const row = new ActionRowBuilder().addComponents(dateSelect);
 
         await interaction.reply({
-            content: `**Step 2 of 4**: Select when this restock will occur at **${store}**`,
+            content: `**Step 2 of 4**: Select when this restock will occur at **${formattedStore}**`,
             components: [row],
             ephemeral: true
         });
