@@ -50,7 +50,9 @@ async function handleRestockButtonClick(interaction, region) {
             ? config.commandChannels.restock_in_progress_va
             : config.commandChannels.restock_in_progress_md;
         
-        if (interaction.channelId !== channelId) {
+        // Test channel exception: 1435130632320712844
+        const testChannelId = '1435130632320712844';
+        if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
             return await interaction.reply({
                 content: `❌ This button can only be used in <#${channelId}>`,
                 ephemeral: true
@@ -95,7 +97,9 @@ async function handlePastRestockButtonClick(interaction, region) {
             ? config.commandChannels.report_past_restock_va
             : config.commandChannels.report_past_restock_md;
         
-        if (interaction.channelId !== channelId) {
+        // Test channel exception: 1435130632320712844
+        const testChannelId = '1435130632320712844';
+        if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
             return await interaction.reply({
                 content: `❌ This button can only be used in <#${channelId}>`,
                 ephemeral: true
@@ -289,7 +293,7 @@ async function handlePastRestockStoreTypeSelect(interaction, region) {
 }
 
 /**
- * Handle location selection and create restock report (in-progress)
+ * Handle location selection and show confirmation (in-progress)
  */
 async function handleLocationSelect(interaction, region) {
     try {
@@ -307,114 +311,67 @@ async function handleLocationSelect(interaction, region) {
                 components: [],
                 ephemeral: true
             });
-            // Ephemeral messages can't be deleted, but we'll leave it as is
             return response;
         }
 
-        const restockId = generateId();
-        console.log('🆔 Generated restock ID:', restockId);
-        const now = new Date();
-        const weekStart = getWeekStart(now);
-
-        const restockReport = {
-            id: restockId,
+        // Generate session ID and store data temporarily
+        const sessionId = generateModalId();
+        modalDataCache.set(sessionId, {
             store: store,
-            notes: '',
-            date: now.toISOString(),
-            reported_by: userId,
-            reported_by_username: username,
-            status: 'pending',
-            week_start: weekStart.toISOString().split('T')[0],
-            created_at: now.toISOString(),
-            type: 'in_progress',
-            source: 'button'
-        };
+            storeType: storeType,
+            region: region,
+            userId: userId,
+            username: username,
+            reportType: 'in_progress',
+            timestamp: Date.now()
+        });
 
-        await dataManager.addRestock(restockReport);
-        console.log('💾 Saved restock to database with ID:', restockId);
-
-        const cooldown = {
-            user_id: userId,
-            store: store,
-            last_report: now.toISOString(),
-            expires_at: new Date(now.getTime() + (36 * 60 * 60 * 1000)).toISOString()
-        };
-        await dataManager.addCooldown(cooldown);
-
+        // Show confirmation screen with warning
         const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-        const approvalEmbed = new EmbedBuilder()
+        const confirmEmbed = new EmbedBuilder()
             .setColor(0xFF6B35)
-            .setTitle('🚨 Restock IN PROGRESS - Pending Approval')
-            .setDescription(`A restock currently in progress has been reported and is awaiting approval.`)
+            .setTitle('⚠️ Confirm Restock Report')
+            .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: true },
-                { name: '👤 Reported By', value: username, inline: true },
-                { name: '📅 Date', value: `<t:${Math.floor(now.getTime() / 1000)}:F>`, inline: true },
-                { name: '🆔 Report ID', value: restockId, inline: true },
-                { name: '📱 Source', value: 'Button Workflow', inline: true }
-            );
+                { name: '🏪 Store', value: store, inline: false },
+                { name: '📅 Type', value: 'Restock In Progress', inline: true },
+                { name: '📍 Region', value: region.toUpperCase(), inline: true },
+                { 
+                    name: '🚨 Warning', 
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
+                    inline: false 
+                }
+            )
+            .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
 
-        approvalEmbed.setFooter({ text: 'Use the buttons below to approve or reject this report' });
-
-        const approveButtonId = `approve_${restockId}`;
-        const rejectButtonId = `reject_${restockId}`;
-        
-        const approvalRow = new ActionRowBuilder()
+        const confirmRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(approveButtonId)
-                    .setLabel('✅ Approve')
+                    .setCustomId(`confirm_in_progress_${region}_${sessionId}`)
+                    .setLabel('✅ Confirm & Submit')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
-                    .setCustomId(`approve_note_${restockId}`)
-                    .setLabel('✅ Approve + Note')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(rejectButtonId)
-                    .setLabel('❌ Reject')
+                    .setCustomId(`cancel_report_${sessionId}`)
+                    .setLabel('❌ Cancel')
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannelId = config.channels.restockApprovals;
-
-        try {
-            if (approvalChannelId && approvalChannelId.trim() !== '') {
-                const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
-                if (approvalChannel) {
-                    // Get admin mentions
-                    const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions();
-                    const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
-                    await approvalChannel.send({
-                        content: mentionText,
-                        embeds: [approvalEmbed],
-                        components: [approvalRow]
-                    });
-                }
-            }
-        } catch (sendErr) {
-            console.error('⚠️ Could not send to approval channel:', sendErr.message);
-        }
-
         await interaction.update({
-            content: `✅ **In-Progress Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting approval.`,
-            components: [],
+            embeds: [confirmEmbed],
+            components: [confirmRow],
             ephemeral: true
         });
-
-        // Note: Ephemeral messages cannot be auto-deleted by bots (Discord limitation)
 
     } catch (error) {
         console.error(`❌ Error handling location select (${region}):`, error);
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({
-                content: '❌ There was an error submitting your report. Please try again.',
+                content: '❌ There was an error. Please try again.',
                 ephemeral: true
             });
         } else if (interaction.deferred) {
             await interaction.editReply({
-                content: '❌ There was an error submitting your report. Please try again.',
+                content: '❌ There was an error. Please try again.',
                 components: []
             });
         }
@@ -483,7 +440,7 @@ async function handlePastRestockLocationSelect(interaction, region) {
 }
 
 /**
- * Handle date selection from dropdown
+ * Handle date selection and show confirmation (past restocks)
  */
 async function handlePastRestockDateSelect(interaction, region) {
     try {
@@ -511,19 +468,58 @@ async function handlePastRestockDateSelect(interaction, region) {
         }
 
         const store = cachedData.store;
-        const storeType = cachedData.storeType;
-
-        // Handle preset date selection (0-5 days ago)
-        await interaction.deferReply({ ephemeral: true });
-
         const days = parseInt(daysAgo);
         const now = new Date();
         const restockDate = new Date(now);
         restockDate.setDate(restockDate.getDate() - days);
-        restockDate.setHours(0, 0, 0, 0); // Set to start of day
+        restockDate.setHours(0, 0, 0, 0);
 
         const dateInput = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days} days ago`;
-        await processPastRestockSubmission(interaction, region, store, storeType, restockDate, dateInput, sessionId);
+
+        // Update cache with date info
+        cachedData.restockDate = restockDate;
+        cachedData.dateInput = dateInput;
+        cachedData.reportType = 'past';
+        cachedData.username = interaction.user.username;
+        modalDataCache.set(sessionId, cachedData);
+
+        // Show confirmation screen with warning
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const confirmEmbed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setTitle('⚠️ Confirm Past Restock Report')
+            .setDescription('**Please confirm this is an actual restock before submitting.**')
+            .addFields(
+                { name: '🏪 Store', value: store, inline: false },
+                { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
+                { name: '📝 Date Input', value: dateInput, inline: true },
+                { name: '📍 Region', value: region.toUpperCase(), inline: true },
+                { name: 'ℹ️ Note', value: 'This will be logged only (no public alert)', inline: false },
+                { 
+                    name: '🚨 Warning', 
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
+                    inline: false 
+                }
+            )
+            .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
+
+        const confirmRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`confirm_past_${region}_${sessionId}`)
+                    .setLabel('✅ Confirm & Submit')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`cancel_report_${sessionId}`)
+                    .setLabel('❌ Cancel')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        await interaction.update({
+            embeds: [confirmEmbed],
+            components: [confirmRow],
+            ephemeral: true
+        });
 
     } catch (error) {
         console.error(`❌ Error handling past restock date select (${region}):`, error);
@@ -534,7 +530,7 @@ async function handlePastRestockDateSelect(interaction, region) {
             });
         } else if (interaction.deferred) {
             await interaction.editReply({
-                content: '❌ There was an error submitting your report. Please try again.'
+                content: '❌ There was an error. Please try again.'
             });
         }
     }
@@ -654,9 +650,6 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
             ephemeral: true
         });
 
-        // Note: Ephemeral messages cannot be auto-deleted by bots (Discord limitation)
-        // Users can manually dismiss them, but they will remain visible until dismissed
-
     } catch (error) {
         console.error(`❌ Error processing past restock submission (${region}):`, error);
         throw error;
@@ -752,7 +745,9 @@ async function handleUpcomingRestockButtonClick(interaction, region) {
             ? config.commandChannels.restock_in_progress_va
             : config.commandChannels.restock_in_progress_md;
         
-        if (interaction.channelId !== channelId) {
+        // Test channel exception: 1435130632320712844
+        const testChannelId = '1435130632320712844';
+        if (interaction.channelId !== channelId && interaction.channelId !== testChannelId) {
             return await interaction.reply({
                 content: `❌ This button can only be used in <#${channelId}>`,
                 ephemeral: true
@@ -1020,19 +1015,17 @@ async function handleUpcomingRestockDateSelect(interaction, region) {
 }
 
 /**
- * Handle note modal submission (for upcoming restocks)
+ * Handle note modal submission and show confirmation (for upcoming restocks)
  */
 async function handleUpcomingRestockNoteSubmit(interaction, region) {
     try {
-        await interaction.deferReply({ ephemeral: true });
-
         const customId = interaction.customId;
         const sessionId = customId.replace(`upcoming_restock_note_${region}_`, '');
         
         // Retrieve store info from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
-            return await interaction.editReply({
+            return await interaction.reply({
                 content: '❌ Session expired. Please start over by clicking the button again.',
                 ephemeral: true
             });
@@ -1040,29 +1033,72 @@ async function handleUpcomingRestockNoteSubmit(interaction, region) {
 
         // Verify it's the same user
         if (cachedData.userId !== interaction.user.id) {
-            return await interaction.editReply({
+            return await interaction.reply({
                 content: '❌ This form was started by a different user. Please start over.',
                 ephemeral: true
             });
         }
 
         const store = cachedData.store;
-        const storeType = cachedData.storeType;
         const restockDate = cachedData.restockDate;
         const dateInput = cachedData.dateInput;
         const note = interaction.fields.getTextInputValue('restock_note');
 
-        await processUpcomingRestockSubmission(interaction, region, store, storeType, restockDate, dateInput, note, sessionId);
+        // Update cache with note
+        cachedData.note = note;
+        cachedData.reportType = 'upcoming';
+        cachedData.username = interaction.user.username;
+        modalDataCache.set(sessionId, cachedData);
+
+        // Show confirmation screen with warning
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const confirmEmbed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('⚠️ Confirm Upcoming Restock Report')
+            .setDescription('**Please confirm this is an actual restock before submitting.**')
+            .addFields(
+                { name: '🏪 Store', value: store, inline: false },
+                { name: '📅 Restock Date', value: `<t:${Math.floor(restockDate.getTime() / 1000)}:F>`, inline: true },
+                { name: '📝 Date Input', value: dateInput, inline: true },
+                { name: '📍 Region', value: region.toUpperCase(), inline: true },
+                { name: '📋 What Will Restock', value: note || 'No note provided', inline: false },
+                { name: 'ℹ️ Note', value: 'This will be logged only (no public alert)', inline: false },
+                { 
+                    name: '🚨 Warning', 
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
+                    inline: false 
+                }
+            )
+            .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
+
+        const confirmRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`confirm_upcoming_${region}_${sessionId}`)
+                    .setLabel('✅ Confirm & Submit')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`cancel_report_${sessionId}`)
+                    .setLabel('❌ Cancel')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        await interaction.reply({
+            embeds: [confirmEmbed],
+            components: [confirmRow],
+            ephemeral: true
+        });
 
     } catch (error) {
         console.error(`❌ Error handling upcoming restock note submit (${region}):`, error);
-        if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ There was an error submitting your report. Please try again.'
+        if (interaction.replied) {
+            await interaction.followUp({
+                content: '❌ There was an error. Please try again.',
+                ephemeral: true
             });
         } else {
             await interaction.reply({
-                content: '❌ There was an error submitting your report. Please try again.',
+                content: '❌ There was an error. Please try again.',
                 ephemeral: true
             });
         }
@@ -1197,15 +1233,13 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
  */
 async function handleCustomStoreNameInProgress(interaction, region) {
     try {
-        await interaction.deferReply({ ephemeral: true });
-
         const customId = interaction.customId;
         const sessionId = customId.split('_').pop();
         
         // Retrieve session data from cache
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData) {
-            return await interaction.editReply({
+            return await interaction.reply({
                 content: '❌ Session expired. Please start over by clicking the button again.',
                 ephemeral: true
             });
@@ -1213,7 +1247,7 @@ async function handleCustomStoreNameInProgress(interaction, region) {
 
         // Verify it's the same user
         if (cachedData.userId !== interaction.user.id) {
-            return await interaction.editReply({
+            return await interaction.reply({
                 content: '❌ This form was started by a different user. Please start over.',
                 ephemeral: true
             });
@@ -1221,126 +1255,64 @@ async function handleCustomStoreNameInProgress(interaction, region) {
 
         const store = interaction.fields.getTextInputValue('custom_store_name').trim();
         if (!store) {
-            return await interaction.editReply({
+            return await interaction.reply({
                 content: '❌ Store name cannot be empty.',
                 ephemeral: true
             });
         }
 
-        // Clean up cache
-        modalDataCache.delete(sessionId);
+        // Update cache with the custom store name
+        cachedData.store = store;
+        cachedData.username = interaction.user.username;
+        cachedData.reportType = 'in_progress';
+        modalDataCache.set(sessionId, cachedData);
 
-        // Process the restock submission directly (similar to handleLocationSelect)
-        const userId = interaction.user.id;
-        const username = interaction.user.username;
-
-        const cooldownCheck = await checkCooldowns(userId, store);
-        if (!cooldownCheck.allowed) {
-            return await interaction.editReply({
-                content: `⏰ **Cooldown Active**: ${cooldownCheck.reason}`,
-                ephemeral: true
-            });
-        }
-
-        const restockId = generateId();
-        const now = new Date();
-        const weekStart = getWeekStart(now);
-
-        const restockReport = {
-            id: restockId,
-            store: store,
-            notes: '',
-            date: now.toISOString(),
-            reported_by: userId,
-            reported_by_username: username,
-            status: 'pending',
-            week_start: weekStart.toISOString().split('T')[0],
-            created_at: now.toISOString(),
-            type: 'in_progress',
-            source: 'button'
-        };
-
-        await dataManager.addRestock(restockReport);
-        console.log('💾 Saved custom store restock to database with ID:', restockId);
-
-        const cooldown = {
-            user_id: userId,
-            store: store,
-            last_report: now.toISOString(),
-            expires_at: new Date(now.getTime() + (36 * 60 * 60 * 1000)).toISOString()
-        };
-        await dataManager.addCooldown(cooldown);
-
+        // Show confirmation screen with warning
         const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-        const approvalEmbed = new EmbedBuilder()
+        const confirmEmbed = new EmbedBuilder()
             .setColor(0xFF6B35)
-            .setTitle('🚨 Restock IN PROGRESS - Pending Approval')
-            .setDescription(`A restock currently in progress has been reported and is awaiting approval.`)
+            .setTitle('⚠️ Confirm Restock Report')
+            .setDescription('**Please confirm this is an actual restock before submitting.**')
             .addFields(
-                { name: '🏪 Store', value: store, inline: true },
-                { name: '👤 Reported By', value: username, inline: true },
-                { name: '📅 Date', value: `<t:${Math.floor(now.getTime() / 1000)}:F>`, inline: true },
-                { name: '🆔 Report ID', value: restockId, inline: true },
-                { name: '📱 Source', value: 'Button Workflow (Custom Store)', inline: true }
-            );
+                { name: '🏪 Store', value: store, inline: false },
+                { name: '📅 Type', value: 'Restock In Progress', inline: true },
+                { name: '📍 Region', value: region.toUpperCase(), inline: true },
+                { 
+                    name: '🚨 Warning', 
+                    value: '**Submitting false restock reports can result in a ban or other disciplinary action.**\n\nOnly submit if this is a genuine restock event.', 
+                    inline: false 
+                }
+            )
+            .setFooter({ text: 'Click "Confirm & Submit" to send for approval, or "Cancel" to go back' });
 
-        approvalEmbed.setFooter({ text: 'Use the buttons below to approve or reject this report' });
-
-        const approveButtonId = `approve_${restockId}`;
-        const rejectButtonId = `reject_${restockId}`;
-        
-        const approvalRow = new ActionRowBuilder()
+        const confirmRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(approveButtonId)
-                    .setLabel('✅ Approve')
+                    .setCustomId(`confirm_in_progress_${region}_${sessionId}`)
+                    .setLabel('✅ Confirm & Submit')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
-                    .setCustomId(`approve_note_${restockId}`)
-                    .setLabel('✅ Approve + Note')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(rejectButtonId)
-                    .setLabel('❌ Reject')
+                    .setCustomId(`cancel_report_${sessionId}`)
+                    .setLabel('❌ Cancel')
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannelId = config.channels.restockApprovals;
-
-        try {
-            if (approvalChannelId && approvalChannelId.trim() !== '') {
-                const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
-                if (approvalChannel) {
-                    // Get admin mentions
-                    const { getAdminMentions } = require('./approvalManager');
-                    const adminMentions = await getAdminMentions();
-                    const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
-                    
-                    await approvalChannel.send({
-                        content: mentionText,
-                        embeds: [approvalEmbed],
-                        components: [approvalRow]
-                    });
-                }
-            }
-        } catch (sendErr) {
-            console.error('⚠️ Could not send to approval channel:', sendErr.message);
-        }
-
-        await interaction.editReply({
-            content: `✅ **In-Progress Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting approval.`,
+        await interaction.reply({
+            embeds: [confirmEmbed],
+            components: [confirmRow],
             ephemeral: true
         });
 
     } catch (error) {
         console.error(`❌ Error handling custom store name (in-progress) (${region}):`, error);
-        if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ There was an error submitting your report. Please try again.'
+        if (interaction.replied) {
+            await interaction.followUp({
+                content: '❌ There was an error. Please try again.',
+                ephemeral: true
             });
         } else {
             await interaction.reply({
-                content: '❌ There was an error submitting your report. Please try again.',
+                content: '❌ There was an error. Please try again.',
                 ephemeral: true
             });
         }
@@ -1616,6 +1588,245 @@ async function handleLookupButtonClick(interaction, region) {
     }
 }
 
+/**
+ * Handle confirmation for in-progress restock
+ */
+async function handleConfirmInProgress(interaction, region) {
+    try {
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`confirm_in_progress_${region}_`, '');
+        
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.update({
+                content: '❌ Session expired or invalid. Please start over.',
+                components: [],
+                ephemeral: true
+            });
+        }
+
+        const store = cachedData.store;
+        const userId = cachedData.userId;
+        const username = cachedData.username;
+
+        // Clean up cache
+        modalDataCache.delete(sessionId);
+
+        const cooldownCheck = await checkCooldowns(userId, store);
+        if (!cooldownCheck.allowed) {
+            return await interaction.update({
+                content: `⏰ **Cooldown Active**: ${cooldownCheck.reason}`,
+                components: [],
+                ephemeral: true
+            });
+        }
+
+        // Process the submission
+        const restockId = generateId();
+        console.log('🆔 Generated restock ID:', restockId);
+        const now = new Date();
+        const weekStart = getWeekStart(now);
+
+        const restockReport = {
+            id: restockId,
+            store: store,
+            notes: '',
+            date: now.toISOString(),
+            reported_by: userId,
+            reported_by_username: username,
+            status: 'pending',
+            week_start: weekStart.toISOString().split('T')[0],
+            created_at: now.toISOString(),
+            type: 'in_progress',
+            source: 'button'
+        };
+
+        await dataManager.addRestock(restockReport);
+        console.log('💾 Saved restock to database with ID:', restockId);
+
+        const cooldown = {
+            user_id: userId,
+            store: store,
+            last_report: now.toISOString(),
+            expires_at: new Date(now.getTime() + (36 * 60 * 60 * 1000)).toISOString()
+        };
+        await dataManager.addCooldown(cooldown);
+
+        // Send to approval channel
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const approvalEmbed = new EmbedBuilder()
+            .setColor(0xFF6B35)
+            .setTitle('🚨 Restock IN PROGRESS - Pending Approval')
+            .setDescription(`A restock currently in progress has been reported and is awaiting approval.`)
+            .addFields(
+                { name: '🏪 Store', value: store, inline: true },
+                { name: '👤 Reported By', value: username, inline: true },
+                { name: '📅 Date', value: `<t:${Math.floor(now.getTime() / 1000)}:F>`, inline: true },
+                { name: '🆔 Report ID', value: restockId, inline: true },
+                { name: '📱 Source', value: 'Button Workflow', inline: true }
+            );
+
+        approvalEmbed.setFooter({ text: 'Use the buttons below to approve or reject this report' });
+
+        const approveButtonId = `approve_${restockId}`;
+        const rejectButtonId = `reject_${restockId}`;
+        
+        const approvalRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(approveButtonId)
+                    .setLabel('✅ Approve')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`approve_note_${restockId}`)
+                    .setLabel('✅ Approve + Note')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(rejectButtonId)
+                    .setLabel('❌ Reject')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        const approvalChannelId = config.channels.restockApprovals;
+
+        try {
+            if (approvalChannelId && approvalChannelId.trim() !== '') {
+                const approvalChannel = interaction.client.channels.cache.get(approvalChannelId);
+                if (approvalChannel) {
+                    const { getAdminMentions } = require('./approvalManager');
+                    const adminMentions = await getAdminMentions();
+                    const mentionText = adminMentions ? `${adminMentions} New approval request!` : 'New approval request!';
+                    
+                    await approvalChannel.send({
+                        content: mentionText,
+                        embeds: [approvalEmbed],
+                        components: [approvalRow]
+                    });
+                }
+            }
+        } catch (sendErr) {
+            console.error('⚠️ Could not send to approval channel:', sendErr.message);
+        }
+
+        await interaction.update({
+            content: `✅ **Restock Report Submitted!**\n\n🏪 **Store**: ${store}\n\nYour report has been submitted and is awaiting moderator approval.`,
+            components: [],
+            ephemeral: true
+        });
+
+    } catch (error) {
+        console.error('❌ Error confirming in-progress restock:', error);
+        await interaction.update({
+            content: '❌ There was an error submitting your report. Please try again.',
+            components: [],
+            ephemeral: true
+        });
+    }
+}
+
+/**
+ * Handle confirmation for past restock
+ */
+async function handleConfirmPast(interaction, region) {
+    try {
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`confirm_past_${region}_`, '');
+        
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.update({
+                content: '❌ Session expired or invalid. Please start over.',
+                components: [],
+                ephemeral: true
+            });
+        }
+
+        const store = cachedData.store;
+        const storeType = cachedData.storeType;
+        const restockDate = cachedData.restockDate;
+        const dateInput = cachedData.dateInput;
+
+        // Clean up cache
+        modalDataCache.delete(sessionId);
+
+        await interaction.deferReply({ ephemeral: true });
+        await processPastRestockSubmission(interaction, region, store, storeType, restockDate, dateInput, sessionId);
+
+    } catch (error) {
+        console.error('❌ Error confirming past restock:', error);
+        await interaction.update({
+            content: '❌ There was an error submitting your report. Please try again.',
+            components: [],
+            ephemeral: true
+        });
+    }
+}
+
+/**
+ * Handle confirmation for upcoming restock
+ */
+async function handleConfirmUpcoming(interaction, region) {
+    try {
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`confirm_upcoming_${region}_`, '');
+        
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.update({
+                content: '❌ Session expired or invalid. Please start over.',
+                components: [],
+                ephemeral: true
+            });
+        }
+
+        const store = cachedData.store;
+        const storeType = cachedData.storeType;
+        const restockDate = cachedData.restockDate;
+        const dateInput = cachedData.dateInput;
+        const note = cachedData.note;
+
+        // Clean up cache
+        modalDataCache.delete(sessionId);
+
+        await interaction.deferReply({ ephemeral: true });
+        await processUpcomingRestockSubmission(interaction, region, store, storeType, restockDate, dateInput, note, sessionId);
+
+    } catch (error) {
+        console.error('❌ Error confirming upcoming restock:', error);
+        await interaction.update({
+            content: '❌ There was an error submitting your report. Please try again.',
+            components: [],
+            ephemeral: true
+        });
+    }
+}
+
+/**
+ * Handle cancel button
+ */
+async function handleCancelReport(interaction) {
+    try {
+        const customId = interaction.customId;
+        const sessionId = customId.replace('cancel_report_', '');
+        
+        // Clean up cache
+        modalDataCache.delete(sessionId);
+
+        await interaction.update({
+            content: '❌ **Report Cancelled**\n\nYour report has been cancelled. Click the button again if you want to start over.',
+            components: [],
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('❌ Error cancelling report:', error);
+        await interaction.update({
+            content: '❌ There was an error cancelling your report.',
+            components: [],
+            ephemeral: true
+        });
+    }
+}
+
 module.exports = {
     handleRestockButtonClick,
     handlePastRestockButtonClick,
@@ -1632,5 +1843,9 @@ module.exports = {
     handleUpcomingRestockNoteSubmit,
     handleCustomStoreNameInProgress,
     handleCustomStoreNameUpcoming,
-    handleLookupButtonClick
+    handleLookupButtonClick,
+    handleConfirmInProgress,
+    handleConfirmPast,
+    handleConfirmUpcoming,
+    handleCancelReport
 };

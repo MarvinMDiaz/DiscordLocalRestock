@@ -118,6 +118,43 @@ module.exports = {
                 await buttonHandlers.handleLookupButtonClick(interaction, 'md');
                 return;
             }
+
+            // Handle confirmation buttons
+            if (customId.startsWith('confirm_in_progress_va_')) {
+                await buttonHandlers.handleConfirmInProgress(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('confirm_in_progress_md_')) {
+                await buttonHandlers.handleConfirmInProgress(interaction, 'md');
+                return;
+            }
+
+            if (customId.startsWith('confirm_past_va_')) {
+                await buttonHandlers.handleConfirmPast(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('confirm_past_md_')) {
+                await buttonHandlers.handleConfirmPast(interaction, 'md');
+                return;
+            }
+
+            if (customId.startsWith('confirm_upcoming_va_')) {
+                await buttonHandlers.handleConfirmUpcoming(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('confirm_upcoming_md_')) {
+                await buttonHandlers.handleConfirmUpcoming(interaction, 'md');
+                return;
+            }
+
+            // Handle cancel button
+            if (customId.startsWith('cancel_report_')) {
+                await buttonHandlers.handleCancelReport(interaction);
+                return;
+            }
             
             // Handle admin control panel buttons
             if (customId.startsWith('admin_')) {
