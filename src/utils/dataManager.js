@@ -25,32 +25,125 @@ class DataManager {
     async loadData() {
         try {
             const data = await fs.readFile(DATA_FILE, 'utf8');
-            this.data = JSON.parse(data);
+            const parsedData = JSON.parse(data);
+
+            // Preserve existing data - never overwrite with empty arrays
+            if (this.data && this.data.last_restocks && this.data.last_restocks.length > 0) {
+                // If we already have history data loaded, preserve it
+                if (!parsedData.last_restocks || parsedData.last_restocks.length === 0) {
+                    console.log('⚠️ Warning: Loaded data has no restock history, preserving existing history');
+                    parsedData.last_restocks = this.data.last_restocks;
+                }
+            }
+
+            this.data = parsedData;
 
             // Migrate old data format to new format (if needed)
             this.migrateDataFormat();
         } catch (error) {
             if (error.code === 'ENOENT') {
                 // File doesn't exist, create default structure
-                this.data = {
-                    restocks: [],
-                    cooldowns: [],
-                    last_restocks: [],
-                    disabled_users: [],
-                    settings: {
-                        auto_cleanup_enabled: true,
-                        last_cleanup: null,
-                        last_weekly_report: null
-                    },
-                    stores: [
-                        "Target - Springfield, VA",
-                        "Target - Woodbridge, VA",
-                        "Target - Fairfax, VA",
-                        "Target - Alexandria, VA",
-                        "Target - Arlington, VA"
-                    ]
-                };
+                // Check if we already have data in memory (from previous load)
+                if (this.data && this.data.last_restocks && this.data.last_restocks.length > 0) {
+                    console.log('⚠️ Warning: Data file not found, but existing data in memory detected. Creating backup before initializing new file.');
+                    // Try to backup existing data
+                    try {
+                        await this.backupData();
+                    } catch (backupErr) {
+                        console.error('❌ Failed to backup existing data:', backupErr);
+                    }
+                    // Keep existing last_restocks if we have them
+                    const existingHistory = this.data.last_restocks || [];
+                    this.data = {
+                        restocks: [],
+                        cooldowns: [],
+                        last_restocks: existingHistory, // Preserve existing history
+                        disabled_users: [],
+                        settings: {
+                            auto_cleanup_enabled: true,
+                            last_cleanup: this.data?.settings?.last_cleanup || null,
+                            last_weekly_report: this.data?.settings?.last_weekly_report || null
+                        },
+                        stores: [
+                            "Target - Springfield, VA",
+                            "Target - Woodbridge, VA",
+                            "Target - Fairfax, VA",
+                            "Target - Alexandria, VA",
+                            "Target - Arlington, VA"
+                        ]
+                    };
+                } else {
+                    // No existing data, create fresh structure
+                    this.data = {
+                        restocks: [],
+                        cooldowns: [],
+                        last_restocks: [],
+                        disabled_users: [],
+                        settings: {
+                            auto_cleanup_enabled: true,
+                            last_cleanup: null,
+                            last_weekly_report: null
+                        },
+                        stores: [
+                            "Target - Springfield, VA",
+                            "Target - Woodbridge, VA",
+                            "Target - Fairfax, VA",
+                            "Target - Alexandria, VA",
+                            "Target - Arlington, VA"
+                        ]
+                    };
+                }
                 await this.saveData();
+            } else if (error instanceof SyntaxError) {
+                // JSON parse error - try to backup corrupted file and preserve what we can
+                console.error('❌ JSON parse error in data file:', error.message);
+                console.log('💾 Attempting to backup corrupted file...');
+                try {
+                    const backupPath = path.join(__dirname, '../../data/backups');
+                    await fs.mkdir(backupPath, { recursive: true });
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const corruptedFile = path.join(backupPath, `corrupted-${timestamp}.json`);
+                    await fs.copyFile(DATA_FILE, corruptedFile);
+                    console.log(`✅ Corrupted file backed up to: ${corruptedFile}`);
+                } catch (backupErr) {
+                    console.error('❌ Failed to backup corrupted file:', backupErr);
+                }
+
+                // Try to preserve existing data if we have it
+                if (this.data && this.data.last_restocks && this.data.last_restocks.length > 0) {
+                    console.log('⚠️ Preserving existing restock history from memory');
+                    const existingHistory = this.data.last_restocks;
+                    this.data = {
+                        restocks: [],
+                        cooldowns: [],
+                        last_restocks: existingHistory, // Preserve history
+                        disabled_users: this.data.disabled_users || [],
+                        settings: this.data.settings || {
+                            auto_cleanup_enabled: true,
+                            last_cleanup: null,
+                            last_weekly_report: null
+                        },
+                        stores: this.data.stores || []
+                    };
+                    await this.saveData();
+                    console.log('✅ Recovered data structure with preserved history');
+                } else {
+                    // No existing data to preserve, create fresh structure
+                    console.log('⚠️ No existing data to preserve, creating fresh structure');
+                    this.data = {
+                        restocks: [],
+                        cooldowns: [],
+                        last_restocks: [],
+                        disabled_users: [],
+                        settings: {
+                            auto_cleanup_enabled: true,
+                            last_cleanup: null,
+                            last_weekly_report: null
+                        },
+                        stores: []
+                    };
+                    await this.saveData();
+                }
             } else {
                 throw error;
             }
@@ -177,11 +270,21 @@ class DataManager {
     async cleanupOldData() {
         const now = new Date();
 
+        // Create backup before cleanup
+        console.log('💾 Creating backup before weekly cleanup...');
+        try {
+            await this.backupData();
+        } catch (backupErr) {
+            console.error('⚠️ Failed to create backup before cleanup:', backupErr);
+            // Continue anyway - backup failure shouldn't stop cleanup
+        }
+
         // Clear current week restocks and cooldowns
         this.data.restocks = [];
         this.data.cooldowns = [];
 
         // Move current week restock dates to previous week for all stores
+        // PRESERVE HISTORY - never clear last_restocks array
         if (this.data.last_restocks && Array.isArray(this.data.last_restocks)) {
             this.data.last_restocks.forEach(storeData => {
                 // Move current week to previous week
@@ -197,7 +300,7 @@ class DataManager {
         this.data.settings.last_cleanup = now.toISOString();
 
         await this.saveData();
-        console.log('🧹 Weekly data cleanup completed - moved current week to previous week');
+        console.log('🧹 Weekly data cleanup completed - moved current week to previous week (history preserved)');
     }
 
     // Get week start (Monday)
