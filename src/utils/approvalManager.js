@@ -127,6 +127,17 @@ async function handleApprovalButton(interaction) {
 
         // If approved, check if this is a past restock (no alert) or regular restock (send alert)
         if (isApproved) {
+            // Log admin action
+            try {
+                await interactionLogger.logAdminAction(interaction.client, {
+                    admin: `${interaction.user.tag} (${interaction.user.id})`,
+                    action: 'Approve Restock',
+                    details: `Restock ID: ${restockId}\nStore: ${restock.store}\nType: ${restock.is_past_restock ? 'Past' : restock.is_upcoming_restock ? 'Upcoming' : 'In Progress'}`
+                });
+            } catch (logError) {
+                console.error('❌ Error logging admin action:', logError);
+            }
+
             if (restock.is_past_restock || restock.is_upcoming_restock) {
                 // Past/Upcoming restock - just log it, no alert
                 const type = restock.is_past_restock ? 'Past' : 'Upcoming';
@@ -150,6 +161,17 @@ async function handleApprovalButton(interaction) {
                 console.log(`⏰ Added 36-hour store cooldown for ${restock.store}`);
             }
         } else {
+            // Log admin action for rejection
+            try {
+                await interactionLogger.logAdminAction(interaction.client, {
+                    admin: `${interaction.user.tag} (${interaction.user.id})`,
+                    action: 'Reject Restock',
+                    details: `Restock ID: ${restockId}\nStore: ${restock.store}`
+                });
+            } catch (logError) {
+                console.error('❌ Error logging admin action:', logError);
+            }
+
             // If rejected, remove the user's cooldown so they can report again immediately
             // since the rejection means the store could still restock
             const cooldowns = dataManager.getCooldowns();
