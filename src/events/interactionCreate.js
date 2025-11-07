@@ -235,76 +235,11 @@ module.exports = {
                     return;
                 }
 
-            // Handle last checked mode selection (all vs specific)
-            if (customId === 'last_checked_mode_va') {
-                console.log(`🔍 [InteractionCreate] Handling last_checked_mode_va, selected: ${interaction.values[0]}`);
-                try {
-                    const mode = interaction.values[0];
-                    if (mode === 'all') {
-                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'va');
-                    } else if (mode === 'specific') {
-                        // Show store selection menu
-                        await handleLastCheckedStoreSelect(interaction, 'va');
-                    }
-                } catch (error) {
-                    console.error(`❌ [InteractionCreate] Error in last_checked_mode_va handler:`, error);
-                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
-                }
-                return;
-            }
-            
-            if (customId === 'last_checked_mode_md') {
-                console.log(`🔍 [InteractionCreate] Handling last_checked_mode_md, selected: ${interaction.values[0]}`);
-                try {
-                    const mode = interaction.values[0];
-                    if (mode === 'all') {
-                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'md');
-                    } else if (mode === 'specific') {
-                        // Show store selection menu
-                        await handleLastCheckedStoreSelect(interaction, 'md');
-                    }
-                } catch (error) {
-                    console.error(`❌ [InteractionCreate] Error in last_checked_mode_md handler:`, error);
-                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
-                }
-                return;
-            }
-
-            // Handle last checked store type selection
-            if (customId === 'last_checked_store_va_type') {
-                const storeType = interaction.values[0];
-                await handleLastCheckedStoreLocation(interaction, 'va', storeType);
-                return;
-            }
-            
-            if (customId === 'last_checked_store_md_type') {
-                const storeType = interaction.values[0];
-                await handleLastCheckedStoreLocation(interaction, 'md', storeType);
-                return;
-            }
-
-            // Handle last checked store location selection (final selection)
-            if (customId.startsWith('last_checked_store_va_') && customId !== 'last_checked_store_va_type') {
-                const parts = customId.split('_');
-                const storeType = parts[parts.length - 1];
-                if (storeType !== 'type') {
-                    const storeName = interaction.values[0];
-                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'va', storeName);
-                    return;
-                }
-            }
-            
-            if (customId.startsWith('last_checked_store_md_') && customId !== 'last_checked_store_md_type') {
-                const parts = customId.split('_');
-                const storeType = parts[parts.length - 1];
-                if (storeType !== 'type') {
-                    const storeName = interaction.values[0];
-                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'md', storeName);
-                    return;
-                }
-            }
-
                 // Handle check store button clicks
+                if (customId === 'check_store_button_va') {
+                    await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');
+                    return;
+                }
                 if (customId === 'check_store_button_va') {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');
                     return;
