@@ -1684,7 +1684,7 @@ async function handleLookupButtonClick(interaction, region) {
                         displayName = displayName.substring(18);
                     }
 
-                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} (${getRelativeTime(new Date(storeData.last_checked_date))})${storeData.last_checked_by_username ? ` by ${storeData.last_checked_by_username}` : ''}` : ''}`;
+                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} (${getRelativeTime(new Date(storeData.last_checked_date))})` : ''}`;
 
                     embed.addFields({
                         name: `🏪 ${displayName}`,
@@ -1859,24 +1859,102 @@ async function handleCheckStoreTypeSelect(interaction, region) {
 }
 
 /**
- * Handle check store location selection - mark as checked
+ * Handle check store location selection - show time input modal
  */
 async function handleCheckStoreLocation(interaction, region) {
     try {
-        await interaction.deferUpdate();
-
         const customId = interaction.customId;
         const storeType = customId.replace(`check_store_location_${region}_`, '');
         const store = interaction.values[0];
-        const userId = interaction.user.id;
-        const username = interaction.user.username;
 
-        // Update last checked
-        await dataManager.updateLastChecked(store, userId, username);
+        // Generate session ID and store store info temporarily
+        const sessionId = generateModalId();
+        modalDataCache.set(sessionId, {
+            store: store,
+            storeType: storeType,
+            region: region,
+            userId: interaction.user.id,
+            username: interaction.user.username,
+            reportType: 'check_store',
+            timestamp: Date.now()
+        });
 
-        const now = new Date();
-        const checkedTime = formatRestockDate(now.toISOString());
-        const checkedTimeRelative = getRelativeTime(now);
+        // Show modal for time input
+        const modal = new ModalBuilder()
+            .setCustomId(`check_store_time_${region}_${sessionId}`)
+            .setTitle('Mark Store as Checked');
+
+        const timeInput = new TextInputBuilder()
+            .setCustomId('check_time')
+            .setLabel('Time Checked (Optional)')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('e.g., 5:10 AM or leave blank for current time')
+            .setRequired(false)
+            .setMaxLength(20);
+
+        const timeRow = new ActionRowBuilder().addComponents(timeInput);
+        modal.addComponents(timeRow);
+
+        await interaction.showModal(modal);
+
+    } catch (error) {
+        console.error(`❌ Error handling check store location (${region}):`, error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ There was an error. Please try again.',
+                ephemeral: true
+            });
+        } else if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ There was an error. Please try again.',
+                components: []
+            });
+        }
+    }
+}
+
+/**
+ * Handle check store time modal submission
+ */
+async function handleCheckStoreTimeSubmit(interaction, region) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`check_store_time_${region}_`, '');
+        
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.editReply({
+                content: '❌ Session expired or invalid. Please start over.',
+                components: []
+            });
+        }
+
+        const store = cachedData.store;
+        const userId = cachedData.userId;
+        const timeInput = interaction.fields.getTextInputValue('check_time').trim();
+
+        // Parse time input
+        let checkedDate = new Date();
+        let timeParseError = false;
+        
+        if (timeInput) {
+            // Try to parse the time input
+            const parsedTime = parseTimeInput(timeInput, checkedDate);
+            if (parsedTime) {
+                checkedDate = parsedTime;
+            } else {
+                // If parsing fails, use current time but warn user
+                timeParseError = true;
+            }
+        }
+
+        // Update last checked with custom time (but don't store username for anonymity)
+        await dataManager.updateLastChecked(store, userId, null, checkedDate);
+
+        const checkedTime = formatRestockDate(checkedDate.toISOString());
+        const checkedTimeRelative = getRelativeTime(checkedDate);
 
         const embed = new EmbedBuilder()
             .setColor(0x4CAF50)
@@ -1884,21 +1962,79 @@ async function handleCheckStoreLocation(interaction, region) {
             .setDescription(`**${store}** has been marked as checked.`)
             .addFields(
                 { name: '🏪 Store', value: store, inline: false },
-                { name: '⏰ Checked At', value: `${checkedTime} (${checkedTimeRelative})`, inline: true },
-                { name: '👤 Checked By', value: username, inline: true }
+                { name: '⏰ Checked At', value: `${checkedTime} (${checkedTimeRelative})`, inline: true }
             )
             .setFooter({ text: 'This helps others know when the store was last visited' })
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed], components: [] });
-        console.log(`✅ ${username} marked ${store} as checked`);
+        // Clean up cache
+        modalDataCache.delete(sessionId);
+
+        let replyContent = { embeds: [embed], components: [] };
+        if (timeParseError) {
+            replyContent.content = `⚠️ Could not parse time "${timeInput}". Used current time instead.`;
+        }
+
+        await interaction.editReply(replyContent);
+        console.log(`✅ Anonymous user marked ${store} as checked at ${checkedTime}`);
 
     } catch (error) {
-        console.error(`❌ Error handling check store location (${region}):`, error);
+        console.error(`❌ Error handling check store time submit (${region}):`, error);
         await interaction.editReply({
             content: '❌ There was an error marking the store as checked. Please try again.',
             components: []
         });
+    }
+}
+
+/**
+ * Parse time input string (e.g., "5:10 AM", "5:10PM", "17:10")
+ */
+function parseTimeInput(timeStr, baseDate) {
+    try {
+        const cleanTime = timeStr.trim().toUpperCase();
+        
+        // Handle formats like "5:10 AM", "5:10AM", "5:10 PM", etc.
+        const amPmMatch = cleanTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+        if (amPmMatch) {
+            let hours = parseInt(amPmMatch[1]);
+            const minutes = parseInt(amPmMatch[2]);
+            const amPm = amPmMatch[3];
+            
+            if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
+                return null;
+            }
+            
+            if (amPm === 'PM' && hours !== 12) {
+                hours += 12;
+            } else if (amPm === 'AM' && hours === 12) {
+                hours = 0;
+            }
+            
+            const result = new Date(baseDate);
+            result.setHours(hours, minutes, 0, 0);
+            return result;
+        }
+        
+        // Handle 24-hour format like "17:10", "5:10"
+        const timeMatch = cleanTime.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            
+            if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                return null;
+            }
+            
+            const result = new Date(baseDate);
+            result.setHours(hours, minutes, 0, 0);
+            return result;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error parsing time input:', error);
+        return null;
     }
 }
 
@@ -2234,6 +2370,7 @@ module.exports = {
     handleCheckStoreButtonClick,
     handleCheckStoreTypeSelect,
     handleCheckStoreLocation,
+    handleCheckStoreTimeSubmit,
     handleConfirmInProgress,
     handleConfirmPast,
     handleConfirmUpcoming,

@@ -533,6 +533,19 @@ module.exports = {
                 return;
             }
 
+            // Handle check store time modal submissions
+            if (customId.startsWith('check_store_time_va_')) {
+                const { handleCheckStoreTimeSubmit } = require('../utils/buttonRestockHandler');
+                await handleCheckStoreTimeSubmit(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('check_store_time_md_')) {
+                const { handleCheckStoreTimeSubmit } = require('../utils/buttonRestockHandler');
+                await handleCheckStoreTimeSubmit(interaction, 'md');
+                return;
+            }
+
 
             // Handle admin store add modal
             if (customId.startsWith('admin_store_add_modal_')) {

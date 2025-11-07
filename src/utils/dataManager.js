@@ -271,15 +271,15 @@ class DataManager {
     }
 
     // Update last checked - tracks when a store was checked (even if no restock)
-    async updateLastChecked(store, userId, username) {
+    async updateLastChecked(store, userId, username, customDate = null) {
         const existingIndex = this.data.last_restocks.findIndex(r => r.store === store);
-        const now = new Date();
+        const now = customDate || new Date();
 
         const updateData = {
             store: store,
             last_checked_date: now.toISOString(),
             last_checked_by: userId,
-            last_checked_by_username: username,
+            last_checked_by_username: null, // Anonymous - don't store username
             // Preserve restock data if it exists
             current_week_restock_date: existingIndex >= 0 ? (this.data.last_restocks[existingIndex].current_week_restock_date || null) : null,
             previous_week_restock_date: existingIndex >= 0 ? (this.data.last_restocks[existingIndex].previous_week_restock_date || null) : null,
