@@ -450,7 +450,7 @@ module.exports = {
                 }
             }
             return;
-                }
+        }
 
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
