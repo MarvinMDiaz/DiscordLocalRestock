@@ -2675,8 +2675,6 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
         }
 
         const embed = new EmbedBuilder()
-
-        const embed = new EmbedBuilder()
             .setColor(0x4CAF50)
             .setTitle('✅ Store Marked as Checked')
             .setDescription(`**${store}** has been marked as checked.`)
