@@ -120,6 +120,17 @@ module.exports = {
                     return;
                 }
 
+                // Handle last checked button clicks
+                if (customId === 'last_checked_button_va') {
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va');
+                    return;
+                }
+                
+                if (customId === 'last_checked_button_md') {
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md');
+                    return;
+                }
+
                 // Handle check store button clicks
                 if (customId === 'check_store_button_va') {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');

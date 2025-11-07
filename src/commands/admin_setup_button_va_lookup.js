@@ -74,7 +74,7 @@ module.exports = {
                     },
                     { 
                         name: '💡 Quick Access', 
-                        value: 'Click the buttons below to view restock status or mark a store as checked!', 
+                        value: 'Click the buttons below to view restock status, see last checked stores, or mark a store as checked!', 
                         inline: false 
                     }
                 )
@@ -87,6 +87,11 @@ module.exports = {
                         .setLabel('View Restock Status')
                         .setStyle(ButtonStyle.Primary)
                         .setEmoji('📊'),
+                    new ButtonBuilder()
+                        .setCustomId('last_checked_button_va')
+                        .setLabel('View Last Checked')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('⏰'),
                     new ButtonBuilder()
                         .setCustomId('check_store_button_va')
                         .setLabel('Mark Store as Checked')

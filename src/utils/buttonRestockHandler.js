@@ -1786,6 +1786,148 @@ async function handleLookupButtonClick(interaction, region) {
 }
 
 /**
+ * Handle last checked button click (VA/MD) - show all last checked stores
+ */
+async function handleLastCheckedButtonClick(interaction, region) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const isVA = region === 'va';
+        const isMD = region === 'md';
+
+        // Get store restock history from last_restocks
+        const lastRestocks = dataManager.getLastRestocks();
+
+        // Build allowed stores list
+        let allowedStores = [];
+        if (isVA) {
+            allowedStores = [
+                ...(config.stores?.target?.va || []),
+                ...(config.stores?.bestbuy?.va || []),
+                ...(config.stores?.barnesandnoble?.va || [])
+            ];
+        } else if (isMD) {
+            allowedStores = [
+                ...(config.stores?.target?.md || []),
+                ...(config.stores?.bestbuy?.md || []),
+                ...(config.stores?.barnesandnoble?.md || [])
+            ];
+        }
+
+        // Filter to only show stores from the allowed region that have been checked
+        const checkedStores = lastRestocks.filter(storeData => {
+            if (allowedStores.length > 0 && !allowedStores.includes(storeData.store)) {
+                return false;
+            }
+            return storeData.last_checked_date != null;
+        });
+
+        if (checkedStores.length === 0) {
+            return await interaction.editReply({
+                content: '📭 **No stores have been marked as checked yet.**\n\nUse "Mark Store as Checked" to report when you visit a store.'
+            });
+        }
+
+        // Sort by last checked date (most recent first)
+        checkedStores.sort((a, b) => {
+            const dateA = new Date(a.last_checked_date);
+            const dateB = new Date(b.last_checked_date);
+            return dateB - dateA;
+        });
+
+        // Group stores by store type
+        const storesByType = {
+            'target': [],
+            'bestbuy': [],
+            'barnesandnoble': [],
+            'other': []
+        };
+
+        for (const storeData of checkedStores) {
+            const storeType = getStoreType(storeData.store);
+            storesByType[storeType] = storesByType[storeType] || [];
+            storesByType[storeType].push(storeData);
+        }
+
+        // Create embeds for each store type (only if they have checked stores)
+        const embeds = [];
+        const storeTypeOrder = ['target', 'bestbuy', 'barnesandnoble', 'other'];
+
+        for (const storeType of storeTypeOrder) {
+            const stores = storesByType[storeType];
+            if (!stores || stores.length === 0) continue;
+
+            const typeDisplay = getStoreTypeDisplay(storeType);
+            const embed = new EmbedBuilder()
+                .setColor(typeDisplay.color)
+                .setTitle(`${typeDisplay.emoji} ${typeDisplay.name} - Last Checked`)
+                .setDescription(isVA ? `Showing last checked times for ${typeDisplay.name} stores in Virginia` : `Showing last checked times for ${typeDisplay.name} stores in Maryland`)
+                .setTimestamp();
+
+            // Add fields for each store showing last checked time
+            let fieldCount = 0;
+            for (const storeData of stores) {
+                if (fieldCount >= 25) break; // Discord limit: 25 fields per embed
+
+                try {
+                    let displayName = storeData.store;
+                    // Remove store type prefix for cleaner display
+                    if (storeType === 'target' && displayName.toLowerCase().startsWith('target - ')) {
+                        displayName = displayName.substring(9);
+                    } else if (storeType === 'bestbuy' && displayName.toLowerCase().startsWith('best buy - ')) {
+                        displayName = displayName.substring(11);
+                    } else if (storeType === 'barnesandnoble' && displayName.toLowerCase().startsWith('barnes & noble - ')) {
+                        displayName = displayName.substring(18);
+                    }
+
+                    const checkedDate = formatRestockDate(storeData.last_checked_date);
+                    const checkedTime = formatTime(storeData.last_checked_date);
+                    const relativeTime = getRelativeTime(storeData.last_checked_date);
+
+                    const fieldValue = `**Last Checked:** ${checkedDate} at ${checkedTime}\n**Time:** ${relativeTime}`;
+
+                    embed.addFields({
+                        name: `🏪 ${displayName}`,
+                        value: fieldValue,
+                        inline: false
+                    });
+                    fieldCount++;
+                } catch (fieldError) {
+                    console.error(`Error processing store ${storeData.store}:`, fieldError);
+                    continue;
+                }
+            }
+
+            embeds.push(embed);
+        }
+
+        // Add footer to the last embed
+        if (embeds.length > 0) {
+            embeds[embeds.length - 1].setFooter({
+                text: 'Last checked times help others know when stores were recently visited'
+            });
+        }
+
+        // Discord allows up to 10 embeds per message
+        if (embeds.length === 0) {
+            return await interaction.editReply({
+                content: '📭 **No stores have been marked as checked yet.**'
+            });
+        }
+
+        // Send embeds (Discord allows up to 10 embeds per message)
+        const embedsToSend = embeds.slice(0, 10);
+        await interaction.editReply({ embeds: embedsToSend });
+
+    } catch (error) {
+        console.error(`❌ Error handling last checked button click (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error retrieving last checked stores. Please try again.'
+        });
+    }
+}
+
+/**
  * Handle check store button click (VA/MD) - mark store as checked without restock
  */
 async function handleCheckStoreButtonClick(interaction, region) {
@@ -2682,6 +2824,7 @@ module.exports = {
     handleCustomStoreNameInProgress,
     handleCustomStoreNameUpcoming,
     handleLookupButtonClick,
+    handleLastCheckedButtonClick,
     handleCheckStoreButtonClick,
     handleCheckStoreTypeSelect,
     handleCheckStoreLocation,
