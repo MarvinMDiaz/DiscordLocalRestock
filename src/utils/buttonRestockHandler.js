@@ -1704,7 +1704,7 @@ async function handleLookupButtonClick(interaction, region) {
                         displayName = displayName.substring(18);
                     }
 
-                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} at ${formatTime(storeData.last_checked_date)} (${getRelativeTime(new Date(storeData.last_checked_date))})` : ''}`;
+                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} at ${formatTime(storeData.last_checked_date)} (${getRelativeTime(storeData.last_checked_date)})` : ''}`;
 
                     embed.addFields({
                         name: `🏪 ${displayName}`,
@@ -2234,15 +2234,26 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
             }
             
             // Create date for TODAY at the specified time (local timezone)
+            // Use explicit date construction to avoid timezone issues
             const now = new Date();
-            checkedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const day = now.getDate();
+            
+            // Create date in local timezone (this will be converted to UTC when saved)
+            checkedDate = new Date(year, month, day, hours, minutes, 0, 0);
+            
+            // Log for debugging
+            console.log(`🕐 Creating check date: ${year}-${month+1}-${day} ${hours}:${minutes} (local)`);
+            console.log(`🕐 ISO string: ${checkedDate.toISOString()}`);
+            console.log(`🕐 Current time: ${new Date().toISOString()}`);
         }
 
         // Update last checked with custom time (but don't store username for anonymity)
         await dataManager.updateLastChecked(store, userId, null, checkedDate);
 
         const checkedTime = formatRestockDate(checkedDate.toISOString());
-        const checkedTimeRelative = getRelativeTime(checkedDate);
+        const checkedTimeRelative = getRelativeTime(checkedDate.toISOString());
 
         const embed = new EmbedBuilder()
             .setColor(0x4CAF50)
@@ -2271,9 +2282,14 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
 }
 
 /**
- * Get relative time string (e.g., "2 hours ago")
+ * Get relative time string (e.g., "2 hours ago") - handles timezone correctly
  */
-function getRelativeTime(date) {
+function getRelativeTime(dateString) {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -2284,7 +2300,7 @@ function getRelativeTime(date) {
     if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    return formatRestockDate(date.toISOString());
+    return formatRestockDate(dateString);
 }
 
 /**
