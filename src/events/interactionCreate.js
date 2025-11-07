@@ -450,13 +450,110 @@ module.exports = {
                 }
             }
             return;
-        }
+                }
 
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
             const { customId } = interaction;
             const buttonHandlers = require('../utils/buttonRestockHandler');
             const adminHandlers = require('../utils/adminButtonHandler');
+
+            console.log(`🔍 [InteractionCreate] Handling select menu with customId: ${customId}`);
+
+            // Handle last checked mode selection (all vs specific) - MUST BE FIRST
+            if (customId === 'last_checked_mode_va') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_mode_va, selected: ${interaction.values[0]}`);
+                try {
+                    const mode = interaction.values[0];
+                    if (mode === 'all') {
+                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'va');
+                    } else if (mode === 'specific') {
+                        // Show store selection menu
+                        await handleLastCheckedStoreSelect(interaction, 'va');
+                    }
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_mode_va handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
+            
+            if (customId === 'last_checked_mode_md') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_mode_md, selected: ${interaction.values[0]}`);
+                try {
+                    const mode = interaction.values[0];
+                    if (mode === 'all') {
+                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'md');
+                    } else if (mode === 'specific') {
+                        // Show store selection menu
+                        await handleLastCheckedStoreSelect(interaction, 'md');
+                    }
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_mode_md handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
+
+            // Handle last checked store type selection
+            if (customId === 'last_checked_store_va_type') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_store_va_type, selected: ${interaction.values[0]}`);
+                try {
+                    const storeType = interaction.values[0];
+                    await handleLastCheckedStoreLocation(interaction, 'va', storeType);
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_store_va_type handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
+            
+            if (customId === 'last_checked_store_md_type') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_store_md_type, selected: ${interaction.values[0]}`);
+                try {
+                    const storeType = interaction.values[0];
+                    await handleLastCheckedStoreLocation(interaction, 'md', storeType);
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_store_md_type handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
+
+            // Handle last checked store location selection (final selection)
+            if (customId.startsWith('last_checked_store_va_') && customId !== 'last_checked_store_va_type') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_store_va location, customId: ${customId}`);
+                try {
+                    const parts = customId.split('_');
+                    const storeType = parts[parts.length - 1];
+                    if (storeType !== 'type') {
+                        const storeName = interaction.values[0];
+                        console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
+                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'va', storeName);
+                    }
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_store_va location handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
+            
+            if (customId.startsWith('last_checked_store_md_') && customId !== 'last_checked_store_md_type') {
+                console.log(`🔍 [InteractionCreate] Handling last_checked_store_md location, customId: ${customId}`);
+                try {
+                    const parts = customId.split('_');
+                    const storeType = parts[parts.length - 1];
+                    if (storeType !== 'type') {
+                        const storeName = interaction.values[0];
+                        console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
+                        await buttonHandlers.handleLastCheckedDisplay(interaction, 'md', storeName);
+                    }
+                } catch (error) {
+                    console.error(`❌ [InteractionCreate] Error in last_checked_store_md location handler:`, error);
+                    console.error(`❌ [InteractionCreate] Error stack:`, error.stack);
+                }
+                return;
+            }
 
             // Handle admin remove cooldown store type selection
             if (customId === 'admin_remove_cooldown_store_type') {

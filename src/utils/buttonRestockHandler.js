@@ -1810,7 +1810,7 @@ async function handleLastCheckedButtonClick(interaction, region) {
         await interaction.reply({
             content: '**View Last Checked Stores**\n\nChoose an option:',
             components: [row],
-            ephemeral: true
+            flags: 64 // Ephemeral flag (64 = MessageFlags.Ephemeral)
         });
 
         console.log(`✅ [Last Checked Button] Successfully replied for region: ${region}`);
