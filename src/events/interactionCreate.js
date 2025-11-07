@@ -131,6 +131,17 @@ module.exports = {
                     return;
                 }
 
+                // Handle check store current time button
+                if (customId.startsWith('check_store_current_va_')) {
+                    await buttonHandlers.handleCheckStoreCurrentTime(interaction, 'va');
+                    return;
+                }
+                
+                if (customId.startsWith('check_store_current_md_')) {
+                    await buttonHandlers.handleCheckStoreCurrentTime(interaction, 'md');
+                    return;
+                }
+
                 // Handle confirmation buttons
                 if (customId.startsWith('confirm_in_progress_va_')) {
                     await buttonHandlers.handleConfirmInProgress(interaction, 'va');
@@ -409,6 +420,39 @@ module.exports = {
                 return;
             }
 
+            // Handle check store hour selection
+            if (customId.startsWith('check_store_hour_va_')) {
+                await buttonHandlers.handleCheckStoreHour(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('check_store_hour_md_')) {
+                await buttonHandlers.handleCheckStoreHour(interaction, 'md');
+                return;
+            }
+
+            // Handle check store minute selection
+            if (customId.startsWith('check_store_minute_va_')) {
+                await buttonHandlers.handleCheckStoreMinute(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('check_store_minute_md_')) {
+                await buttonHandlers.handleCheckStoreMinute(interaction, 'md');
+                return;
+            }
+
+            // Handle check store AM/PM selection
+            if (customId.startsWith('check_store_ampm_va_')) {
+                await buttonHandlers.handleCheckStoreAmPm(interaction, 'va');
+                return;
+            }
+            
+            if (customId.startsWith('check_store_ampm_md_')) {
+                await buttonHandlers.handleCheckStoreAmPm(interaction, 'md');
+                return;
+            }
+
             // Handle admin store management select menus
             if (customId === 'admin_store_action') {
                 await adminHandlers.handleStoreAction(interaction);
@@ -533,18 +577,6 @@ module.exports = {
                 return;
             }
 
-            // Handle check store time modal submissions
-            if (customId.startsWith('check_store_time_va_')) {
-                const { handleCheckStoreTimeSubmit } = require('../utils/buttonRestockHandler');
-                await handleCheckStoreTimeSubmit(interaction, 'va');
-                return;
-            }
-            
-            if (customId.startsWith('check_store_time_md_')) {
-                const { handleCheckStoreTimeSubmit } = require('../utils/buttonRestockHandler');
-                await handleCheckStoreTimeSubmit(interaction, 'md');
-                return;
-            }
 
 
             // Handle admin store add modal

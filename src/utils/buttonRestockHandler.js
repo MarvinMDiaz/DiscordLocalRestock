@@ -1859,10 +1859,12 @@ async function handleCheckStoreTypeSelect(interaction, region) {
 }
 
 /**
- * Handle check store location selection - show time input modal
+ * Handle check store location selection - show time selection menus
  */
 async function handleCheckStoreLocation(interaction, region) {
     try {
+        await interaction.deferUpdate();
+
         const customId = interaction.customId;
         const storeType = customId.replace(`check_store_location_${region}_`, '');
         const store = interaction.values[0];
@@ -1879,75 +1881,340 @@ async function handleCheckStoreLocation(interaction, region) {
             timestamp: Date.now()
         });
 
-        // Show modal for time input
-        const modal = new ModalBuilder()
-            .setCustomId(`check_store_time_${region}_${sessionId}`)
-            .setTitle('Mark Store as Checked');
+        // Create hour select menu (1-12)
+        const hourOptions = [];
+        for (let i = 1; i <= 12; i++) {
+            hourOptions.push({
+                label: `${i}`,
+                value: i.toString(),
+                description: i === 1 ? '1 hour' : `${i} hours`
+            });
+        }
 
-        const timeInput = new TextInputBuilder()
-            .setCustomId('check_time')
-            .setLabel('Time Checked (Optional)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('e.g., 5:10 AM or leave blank for current time')
-            .setRequired(false)
-            .setMaxLength(20);
+        const hourSelect = new StringSelectMenuBuilder()
+            .setCustomId(`check_store_hour_${region}_${sessionId}`)
+            .setPlaceholder('Select hour...')
+            .addOptions(hourOptions);
 
-        const timeRow = new ActionRowBuilder().addComponents(timeInput);
-        modal.addComponents(timeRow);
+        // Create minute select menu (00-59 in 5-minute increments)
+        const minuteOptions = [];
+        for (let i = 0; i < 60; i += 5) {
+            const minuteStr = i.toString().padStart(2, '0');
+            minuteOptions.push({
+                label: `:${minuteStr}`,
+                value: minuteStr,
+                description: `${minuteStr} minutes`
+            });
+        }
 
-        await interaction.showModal(modal);
+        const minuteSelect = new StringSelectMenuBuilder()
+            .setCustomId(`check_store_minute_${region}_${sessionId}`)
+            .setPlaceholder('Select minutes...')
+            .addOptions(minuteOptions);
+
+        // Create AM/PM select menu
+        const amPmSelect = new StringSelectMenuBuilder()
+            .setCustomId(`check_store_ampm_${region}_${sessionId}`)
+            .setPlaceholder('Select AM or PM...')
+            .addOptions(
+                { label: 'AM', value: 'AM', emoji: '🌅', description: 'Morning' },
+                { label: 'PM', value: 'PM', emoji: '🌆', description: 'Afternoon/Evening' }
+            );
+
+        // Create "Use Current Time" button
+        const useCurrentButton = new ButtonBuilder()
+            .setCustomId(`check_store_current_${region}_${sessionId}`)
+            .setLabel('Use Current Time')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⏰');
+
+        const row1 = new ActionRowBuilder().addComponents(hourSelect);
+        const row2 = new ActionRowBuilder().addComponents(minuteSelect);
+        const row3 = new ActionRowBuilder().addComponents(amPmSelect);
+        const row4 = new ActionRowBuilder().addComponents(useCurrentButton);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle('⏰ Set Check Time')
+            .setDescription(`**${store}**\n\nSelect the time when this store was checked, or use current time.`)
+            .setFooter({ text: 'You can select hour, minute, and AM/PM, or click "Use Current Time"' })
+            .setTimestamp();
+
+        await interaction.editReply({
+            embeds: [embed],
+            components: [row1, row2, row3, row4]
+        });
 
     } catch (error) {
         console.error(`❌ Error handling check store location (${region}):`, error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                content: '❌ There was an error. Please try again.',
-                ephemeral: true
-            });
-        } else if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ There was an error. Please try again.',
-                components: []
-            });
-        }
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.',
+            components: []
+        });
     }
 }
 
 /**
- * Handle check store time modal submission
+ * Handle check store hour selection
  */
-async function handleCheckStoreTimeSubmit(interaction, region) {
+async function handleCheckStoreHour(interaction, region) {
     try {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferUpdate();
 
         const customId = interaction.customId;
-        const sessionId = customId.replace(`check_store_time_${region}_`, '');
-        
+        const sessionId = customId.replace(`check_store_hour_${region}_`, '');
+        const hour = interaction.values[0];
+
         const cachedData = modalDataCache.get(sessionId);
         if (!cachedData || cachedData.userId !== interaction.user.id) {
             return await interaction.editReply({
-                content: '❌ Session expired or invalid. Please start over.',
+                content: '❌ Session expired. Please start over.',
                 components: []
             });
         }
 
+        cachedData.hour = hour;
+        modalDataCache.set(sessionId, cachedData);
+
+        // Check if we have all time components
+        if (cachedData.hour && cachedData.minute && cachedData.amPm) {
+            await finalizeCheckStoreTime(interaction, region, sessionId, cachedData);
+        } else {
+            // Update the embed to show selected hour
+            await updateCheckStoreTimeEmbed(interaction, region, sessionId, cachedData);
+        }
+
+    } catch (error) {
+        console.error(`❌ Error handling check store hour (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.',
+            components: []
+        });
+    }
+}
+
+/**
+ * Handle check store minute selection
+ */
+async function handleCheckStoreMinute(interaction, region) {
+    try {
+        await interaction.deferUpdate();
+
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`check_store_minute_${region}_`, '');
+        const minute = interaction.values[0];
+
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.editReply({
+                content: '❌ Session expired. Please start over.',
+                components: []
+            });
+        }
+
+        cachedData.minute = minute;
+        modalDataCache.set(sessionId, cachedData);
+
+        // Check if we have all time components
+        if (cachedData.hour && cachedData.minute && cachedData.amPm) {
+            await finalizeCheckStoreTime(interaction, region, sessionId, cachedData);
+        } else {
+            // Update the embed to show selected minute
+            await updateCheckStoreTimeEmbed(interaction, region, sessionId, cachedData);
+        }
+
+    } catch (error) {
+        console.error(`❌ Error handling check store minute (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.',
+            components: []
+        });
+    }
+}
+
+/**
+ * Handle check store AM/PM selection
+ */
+async function handleCheckStoreAmPm(interaction, region) {
+    try {
+        await interaction.deferUpdate();
+
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`check_store_ampm_${region}_`, '');
+        const amPm = interaction.values[0];
+
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.editReply({
+                content: '❌ Session expired. Please start over.',
+                components: []
+            });
+        }
+
+        cachedData.amPm = amPm;
+        modalDataCache.set(sessionId, cachedData);
+
+        // Check if we have all time components
+        if (cachedData.hour && cachedData.minute && cachedData.amPm) {
+            await finalizeCheckStoreTime(interaction, region, sessionId, cachedData);
+        } else {
+            // Update the embed to show selected AM/PM
+            await updateCheckStoreTimeEmbed(interaction, region, sessionId, cachedData);
+        }
+
+    } catch (error) {
+        console.error(`❌ Error handling check store AM/PM (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.',
+            components: []
+        });
+    }
+}
+
+/**
+ * Handle "Use Current Time" button
+ */
+async function handleCheckStoreCurrentTime(interaction, region) {
+    try {
+        await interaction.deferUpdate();
+
+        const customId = interaction.customId;
+        const sessionId = customId.replace(`check_store_current_${region}_`, '');
+
+        const cachedData = modalDataCache.get(sessionId);
+        if (!cachedData || cachedData.userId !== interaction.user.id) {
+            return await interaction.editReply({
+                content: '❌ Session expired. Please start over.',
+                components: []
+            });
+        }
+
+        // Use current time
+        const now = new Date();
+        await finalizeCheckStoreTime(interaction, region, sessionId, cachedData, now);
+
+    } catch (error) {
+        console.error(`❌ Error handling check store current time (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.',
+            components: []
+        });
+    }
+}
+
+/**
+ * Update the check store time embed with current selections
+ */
+async function updateCheckStoreTimeEmbed(interaction, region, sessionId, cachedData) {
+    const store = cachedData.store;
+    let statusText = '**Selected:** ';
+    
+    if (cachedData.hour) statusText += `${cachedData.hour}`;
+    if (cachedData.minute) statusText += `:${cachedData.minute}`;
+    if (cachedData.amPm) statusText += ` ${cachedData.amPm}`;
+    
+    if (!cachedData.hour && !cachedData.minute && !cachedData.amPm) {
+        statusText = '**Select hour, minute, and AM/PM, or use current time**';
+    }
+
+    // Recreate select menus with current selections
+    const hourOptions = [];
+    for (let i = 1; i <= 12; i++) {
+        const isSelected = cachedData.hour === i.toString();
+        hourOptions.push({
+            label: `${isSelected ? '✓ ' : ''}${i}`,
+            value: i.toString(),
+            description: isSelected ? 'Selected' : (i === 1 ? '1 hour' : `${i} hours`)
+        });
+    }
+
+    const hourSelect = new StringSelectMenuBuilder()
+        .setCustomId(`check_store_hour_${region}_${sessionId}`)
+        .setPlaceholder(cachedData.hour ? `Hour: ${cachedData.hour}` : 'Select hour...')
+        .addOptions(hourOptions);
+
+    const minuteOptions = [];
+    for (let i = 0; i < 60; i += 5) {
+        const minuteStr = i.toString().padStart(2, '0');
+        const isSelected = cachedData.minute === minuteStr;
+        minuteOptions.push({
+            label: `${isSelected ? '✓ ' : ''}:${minuteStr}`,
+            value: minuteStr,
+            description: isSelected ? 'Selected' : `${minuteStr} minutes`
+        });
+    }
+
+    const minuteSelect = new StringSelectMenuBuilder()
+        .setCustomId(`check_store_minute_${region}_${sessionId}`)
+        .setPlaceholder(cachedData.minute ? `Minute: ${cachedData.minute}` : 'Select minutes...')
+        .addOptions(minuteOptions);
+
+    const amPmSelect = new StringSelectMenuBuilder()
+        .setCustomId(`check_store_ampm_${region}_${sessionId}`)
+        .setPlaceholder(cachedData.amPm ? `Time: ${cachedData.amPm}` : 'Select AM or PM...')
+        .addOptions(
+            { 
+                label: cachedData.amPm === 'AM' ? '✓ AM' : 'AM', 
+                value: 'AM', 
+                emoji: '🌅', 
+                description: cachedData.amPm === 'AM' ? 'Selected' : 'Morning' 
+            },
+            { 
+                label: cachedData.amPm === 'PM' ? '✓ PM' : 'PM', 
+                value: 'PM', 
+                emoji: '🌆', 
+                description: cachedData.amPm === 'PM' ? 'Selected' : 'Afternoon/Evening' 
+            }
+        );
+
+    const useCurrentButton = new ButtonBuilder()
+        .setCustomId(`check_store_current_${region}_${sessionId}`)
+        .setLabel('Use Current Time')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('⏰');
+
+    const row1 = new ActionRowBuilder().addComponents(hourSelect);
+    const row2 = new ActionRowBuilder().addComponents(minuteSelect);
+    const row3 = new ActionRowBuilder().addComponents(amPmSelect);
+    const row4 = new ActionRowBuilder().addComponents(useCurrentButton);
+
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle('⏰ Set Check Time')
+        .setDescription(`**${store}**\n\n${statusText}`)
+        .setFooter({ text: 'Select hour, minute, and AM/PM, or click "Use Current Time"' })
+        .setTimestamp();
+
+    await interaction.editReply({
+        embeds: [embed],
+        components: [row1, row2, row3, row4]
+    });
+}
+
+/**
+ * Finalize check store time and mark as checked
+ */
+async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData, customDate = null) {
+    try {
         const store = cachedData.store;
         const userId = cachedData.userId;
-        const timeInput = interaction.fields.getTextInputValue('check_time').trim();
 
-        // Parse time input
-        let checkedDate = new Date();
-        let timeParseError = false;
-        
-        if (timeInput) {
-            // Try to parse the time input
-            const parsedTime = parseTimeInput(timeInput, checkedDate);
-            if (parsedTime) {
-                checkedDate = parsedTime;
-            } else {
-                // If parsing fails, use current time but warn user
-                timeParseError = true;
+        let checkedDate = customDate || new Date();
+
+        // If we have hour, minute, and AM/PM, construct the date
+        if (!customDate && cachedData.hour && cachedData.minute && cachedData.amPm) {
+            let hours = parseInt(cachedData.hour);
+            const minutes = parseInt(cachedData.minute);
+            
+            // Convert to 24-hour format
+            if (cachedData.amPm === 'PM' && hours !== 12) {
+                hours += 12;
+            } else if (cachedData.amPm === 'AM' && hours === 12) {
+                hours = 0;
             }
+            
+            checkedDate = new Date();
+            checkedDate.setHours(hours, minutes, 0, 0);
         }
 
         // Update last checked with custom time (but don't store username for anonymity)
@@ -1970,71 +2237,15 @@ async function handleCheckStoreTimeSubmit(interaction, region) {
         // Clean up cache
         modalDataCache.delete(sessionId);
 
-        let replyContent = { embeds: [embed], components: [] };
-        if (timeParseError) {
-            replyContent.content = `⚠️ Could not parse time "${timeInput}". Used current time instead.`;
-        }
-
-        await interaction.editReply(replyContent);
+        await interaction.editReply({ embeds: [embed], components: [] });
         console.log(`✅ Anonymous user marked ${store} as checked at ${checkedTime}`);
 
     } catch (error) {
-        console.error(`❌ Error handling check store time submit (${region}):`, error);
+        console.error(`❌ Error finalizing check store time (${region}):`, error);
         await interaction.editReply({
             content: '❌ There was an error marking the store as checked. Please try again.',
             components: []
         });
-    }
-}
-
-/**
- * Parse time input string (e.g., "5:10 AM", "5:10PM", "17:10")
- */
-function parseTimeInput(timeStr, baseDate) {
-    try {
-        const cleanTime = timeStr.trim().toUpperCase();
-        
-        // Handle formats like "5:10 AM", "5:10AM", "5:10 PM", etc.
-        const amPmMatch = cleanTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-        if (amPmMatch) {
-            let hours = parseInt(amPmMatch[1]);
-            const minutes = parseInt(amPmMatch[2]);
-            const amPm = amPmMatch[3];
-            
-            if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
-                return null;
-            }
-            
-            if (amPm === 'PM' && hours !== 12) {
-                hours += 12;
-            } else if (amPm === 'AM' && hours === 12) {
-                hours = 0;
-            }
-            
-            const result = new Date(baseDate);
-            result.setHours(hours, minutes, 0, 0);
-            return result;
-        }
-        
-        // Handle 24-hour format like "17:10", "5:10"
-        const timeMatch = cleanTime.match(/(\d{1,2}):(\d{2})/);
-        if (timeMatch) {
-            const hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            
-            if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-                return null;
-            }
-            
-            const result = new Date(baseDate);
-            result.setHours(hours, minutes, 0, 0);
-            return result;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Error parsing time input:', error);
-        return null;
     }
 }
 
@@ -2370,7 +2581,10 @@ module.exports = {
     handleCheckStoreButtonClick,
     handleCheckStoreTypeSelect,
     handleCheckStoreLocation,
-    handleCheckStoreTimeSubmit,
+    handleCheckStoreHour,
+    handleCheckStoreMinute,
+    handleCheckStoreAmPm,
+    handleCheckStoreCurrentTime,
     handleConfirmInProgress,
     handleConfirmPast,
     handleConfirmUpcoming,
