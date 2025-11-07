@@ -1790,8 +1790,6 @@ async function handleLookupButtonClick(interaction, region) {
  */
 async function handleLastCheckedButtonClick(interaction, region) {
     try {
-        await interaction.deferReply({ ephemeral: true });
-
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`last_checked_mode_${region}`)
             .setPlaceholder('Choose how to view last checked stores...')
@@ -1802,16 +1800,24 @@ async function handleLastCheckedButtonClick(interaction, region) {
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
-        await interaction.editReply({
+        await interaction.reply({
             content: '**View Last Checked Stores**\n\nChoose an option:',
-            components: [row]
+            components: [row],
+            ephemeral: true
         });
 
     } catch (error) {
         console.error(`❌ Error handling last checked button click (${region}):`, error);
-        await interaction.editReply({
-            content: '❌ There was an error. Please try again.'
-        });
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ There was an error. Please try again.',
+                ephemeral: true
+            });
+        } else if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ There was an error. Please try again.'
+            });
+        }
     }
 }
 
