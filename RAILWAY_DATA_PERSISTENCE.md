@@ -50,4 +50,3 @@ After this, your restock history will persist across deployments!
 - The volume persists data even when the service restarts
 - Backups are still created in `data/backups/` directory
 - If you switch to PostgreSQL later, you can keep the volume for backward compatibility
-

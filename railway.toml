@@ -8,4 +8,3 @@ startCommand = "node src/index.js"
 [[mounts]]
 target = "/app/data"
 source = "data-volume"
-
