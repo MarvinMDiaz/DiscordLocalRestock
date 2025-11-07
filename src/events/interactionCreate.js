@@ -192,6 +192,17 @@ module.exports = {
                     return;
                 }
 
+                // Handle last checked button clicks
+                if (customId === 'last_checked_button_va') {
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va');
+                    return;
+                }
+                
+                if (customId === 'last_checked_button_md') {
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md');
+                    return;
+                }
+
             // Handle last checked mode selection (all vs specific)
             if (customId === 'last_checked_mode_va') {
                 const mode = interaction.values[0];
