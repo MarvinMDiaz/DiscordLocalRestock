@@ -74,34 +74,14 @@ module.exports = {
                     },
                     { 
                         name: '💡 Quick Access', 
-                        value: 'Click the buttons below to view restock status, see last checked stores, or mark a store as checked!', 
+                        value: 'Use `/lookup_md_restocks` to view restock status or `/view_last_checked_md` to see last checked stores!', 
                         inline: false 
                     }
                 )
                 .setTimestamp();
 
-            const buttonRow = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('lookup_restocks_button_md')
-                        .setLabel('View Restock Status')
-                        .setStyle(ButtonStyle.Primary)
-                        .setEmoji('📊'),
-                    new ButtonBuilder()
-                        .setCustomId('last_checked_button_md')
-                        .setLabel('View Last Checked')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('⏰'),
-                    new ButtonBuilder()
-                        .setCustomId('check_store_button_md')
-                        .setLabel('Mark Store as Checked')
-                        .setStyle(ButtonStyle.Primary)
-                        .setEmoji('✅')
-                );
-
             await channel.send({
-                embeds: [embed],
-                components: [buttonRow]
+                embeds: [embed]
             });
 
             await interaction.editReply({

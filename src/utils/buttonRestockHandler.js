@@ -1786,11 +1786,13 @@ async function handleLookupButtonClick(interaction, region) {
 }
 
 /**
- * Handle last checked button click (VA/MD) - show all last checked stores
+ * Handle last checked button click (VA/MD) - show all last checked stores or specific store
  */
-async function handleLastCheckedButtonClick(interaction, region) {
+async function handleLastCheckedButtonClick(interaction, region, specificStore = null) {
     try {
-        await interaction.deferReply({ ephemeral: true });
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply({ ephemeral: true });
+        }
 
         const isVA = region === 'va';
         const isMD = region === 'md';
@@ -1815,12 +1817,25 @@ async function handleLastCheckedButtonClick(interaction, region) {
         }
 
         // Filter to only show stores from the allowed region that have been checked
-        const checkedStores = lastRestocks.filter(storeData => {
+        let checkedStores = lastRestocks.filter(storeData => {
             if (allowedStores.length > 0 && !allowedStores.includes(storeData.store)) {
                 return false;
             }
             return storeData.last_checked_date != null;
         });
+
+        // If specific store is requested, filter to that store
+        if (specificStore) {
+            checkedStores = checkedStores.filter(storeData => 
+                storeData.store.toLowerCase() === specificStore.toLowerCase()
+            );
+            
+            if (checkedStores.length === 0) {
+                return await interaction.editReply({
+                    content: `📭 **${specificStore}** has not been marked as checked yet.\n\nUse "Mark Store as Checked" to report when you visit this store.`
+                });
+            }
+        }
 
         if (checkedStores.length === 0) {
             return await interaction.editReply({
@@ -1835,7 +1850,29 @@ async function handleLastCheckedButtonClick(interaction, region) {
             return dateB - dateA;
         });
 
-        // Group stores by store type
+        // If showing specific store, create a single embed
+        if (specificStore && checkedStores.length > 0) {
+            const storeData = checkedStores[0];
+            const checkedDate = formatRestockDate(storeData.last_checked_date);
+            const checkedTime = formatTime(storeData.last_checked_date);
+            const relativeTime = getRelativeTime(storeData.last_checked_date);
+
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('⏰ Last Checked Store')
+                .setDescription(`**${storeData.store}**`)
+                .addFields(
+                    { name: '📅 Date', value: checkedDate, inline: true },
+                    { name: '🕐 Time', value: checkedTime, inline: true },
+                    { name: '⏰ Relative', value: relativeTime, inline: true }
+                )
+                .setFooter({ text: 'Last checked times help others know when stores were recently visited' })
+                .setTimestamp();
+
+            return await interaction.editReply({ embeds: [embed] });
+        }
+
+        // Group stores by store type (for "all" view)
         const storesByType = {
             'target': [],
             'bestbuy': [],

@@ -1,5 +1,77 @@
 const { Events } = require('discord.js');
 
+// Helper function to handle last checked store selection
+async function handleLastCheckedStoreSelect(interaction, region) {
+    const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+    const config = require('../config/config.json');
+    
+    const storeTypeSelect = new StringSelectMenuBuilder()
+        .setCustomId(`last_checked_store_${region}_type`)
+        .setPlaceholder('Select store type...')
+        .addOptions(
+            { label: 'Target', value: 'target', emoji: '🎯' },
+            { label: 'Best Buy', value: 'bestbuy', emoji: '💻' },
+            { label: 'Barnes & Noble', value: 'barnesandnoble', emoji: '📚' }
+        );
+
+    const row = new ActionRowBuilder().addComponents(storeTypeSelect);
+
+    await interaction.update({
+        content: '**Lookup Specific Store**\nSelect the store type:',
+        components: [row]
+    });
+}
+
+async function handleLastCheckedStoreLocation(interaction, region, storeType) {
+    const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+    const config = require('../config/config.json');
+    const buttonHandlers = require('../utils/buttonRestockHandler');
+    
+    let stores = [];
+    if (storeType === 'target') {
+        stores = region === 'va' 
+            ? (config.stores?.target?.va || [])
+            : (config.stores?.target?.md || []);
+    } else if (storeType === 'bestbuy') {
+        stores = region === 'va'
+            ? (config.stores?.bestbuy?.va || [])
+            : (config.stores?.bestbuy?.md || []);
+    } else if (storeType === 'barnesandnoble') {
+        stores = region === 'va'
+            ? (config.stores?.barnesandnoble?.va || [])
+            : (config.stores?.barnesandnoble?.md || []);
+    }
+
+    if (stores.length === 0) {
+        return await interaction.update({
+            content: '❌ No stores found for this type.',
+            components: []
+        });
+    }
+
+    const locationOptions = stores.slice(0, 25).map(store => {
+        const parts = store.split(' - ');
+        const name = parts.length >= 2 ? parts.slice(1, 2).join(' - ') : parts[1];
+        return {
+            label: name.length > 100 ? name.substring(0, 97) + '...' : name,
+            value: store,
+            description: parts.length > 2 ? parts.slice(2).join(' - ') : undefined
+        };
+    });
+
+    const locationSelect = new StringSelectMenuBuilder()
+        .setCustomId(`last_checked_store_${region}_${storeType}`)
+        .setPlaceholder('Select store location...')
+        .addOptions(locationOptions);
+
+    const row = new ActionRowBuilder().addComponents(locationSelect);
+
+    await interaction.update({
+        content: '**Lookup Specific Store**\nSelect the store location:',
+        components: [row]
+    });
+}
+
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
@@ -120,16 +192,56 @@ module.exports = {
                     return;
                 }
 
-                // Handle last checked button clicks
-                if (customId === 'last_checked_button_va') {
+            // Handle last checked mode selection (all vs specific)
+            if (customId === 'last_checked_mode_va') {
+                const mode = interaction.values[0];
+                if (mode === 'all') {
                     await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va');
-                    return;
+                } else if (mode === 'specific') {
+                    // Show store selection menu
+                    await handleLastCheckedStoreSelect(interaction, 'va');
                 }
-                
-                if (customId === 'last_checked_button_md') {
+                return;
+            }
+            
+            if (customId === 'last_checked_mode_md') {
+                const mode = interaction.values[0];
+                if (mode === 'all') {
                     await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md');
+                } else if (mode === 'specific') {
+                    // Show store selection menu
+                    await handleLastCheckedStoreSelect(interaction, 'md');
+                }
+                return;
+            }
+
+            // Handle last checked store type selection
+            if (customId === `last_checked_store_${region}_type`) {
+                const storeType = interaction.values[0];
+                await handleLastCheckedStoreLocation(interaction, region, storeType);
+                return;
+            }
+
+            // Handle last checked store location selection (final selection)
+            if (customId.startsWith('last_checked_store_va_') && customId !== `last_checked_store_va_type`) {
+                const parts = customId.split('_');
+                const storeType = parts[parts.length - 1];
+                if (storeType !== 'type') {
+                    const storeName = interaction.values[0];
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va', storeName);
                     return;
                 }
+            }
+            
+            if (customId.startsWith('last_checked_store_md_') && customId !== `last_checked_store_md_type`) {
+                const parts = customId.split('_');
+                const storeType = parts[parts.length - 1];
+                if (storeType !== 'type') {
+                    const storeName = interaction.values[0];
+                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md', storeName);
+                    return;
+                }
+            }
 
                 // Handle check store button clicks
                 if (customId === 'check_store_button_va') {
