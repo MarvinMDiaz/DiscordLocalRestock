@@ -6,7 +6,7 @@ const config = require('../../config/config.json');
 const modalDataCache = new Map();
 
 /**
- * Format time as "HH:MM AM/PM" (e.g., "10:00 AM")
+ * Format time as "HH:MM AM/PM" (e.g., "10:00 AM") - converts UTC back to Eastern time
  */
 function formatTime(dateString) {
     if (!dateString) return null;
@@ -14,8 +14,38 @@ function formatTime(dateString) {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return null;
     
-    let hours = date.getHours();
-    const minutes = date.getMinutes();
+    // Convert UTC time back to Eastern time for display
+    // Get UTC hours and minutes
+    const utcHours = date.getUTCHours();
+    const utcMinutes = date.getUTCMinutes();
+    
+    // Determine if we're in EDT (Mar-Nov) or EST (Nov-Mar)
+    const isDST = isEasternDST(date);
+    const offsetHours = isDST ? 4 : 5; // EDT is UTC-4, EST is UTC-5
+    
+    // Convert UTC to Eastern by subtracting the offset
+    let easternHours = utcHours - offsetHours;
+    let easternDay = date.getUTCDate();
+    let easternMonth = date.getUTCMonth();
+    let easternYear = date.getUTCFullYear();
+    
+    // Handle day/month/year rollover when converting back
+    if (easternHours < 0) {
+        easternHours += 24;
+        easternDay--;
+        if (easternDay < 1) {
+            easternMonth--;
+            if (easternMonth < 0) {
+                easternMonth = 11;
+                easternYear--;
+            }
+            easternDay = new Date(easternYear, easternMonth + 1, 0).getDate();
+        }
+    }
+    
+    // Format as 12-hour time
+    let hours = easternHours;
+    const minutes = easternMinutes;
     const amPm = hours >= 12 ? 'PM' : 'AM';
     
     hours = hours % 12;
