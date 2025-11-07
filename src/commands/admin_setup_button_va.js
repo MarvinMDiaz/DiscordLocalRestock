@@ -88,6 +88,11 @@ module.exports = {
                         inline: false 
                     },
                     { 
+                        name: '✅ Mark Store as Checked', 
+                        value: 'Let others know you checked a store (even if no restock). This helps track when stores were last visited.', 
+                        inline: false 
+                    },
+                    { 
                         name: '📝 Quick Guide', 
                         value: '1️⃣ Click a button below\n2️⃣ Select store type (Target, Best Buy, or Barnes & Noble)\n3️⃣ Choose the location\n4️⃣ ⏰ For past/upcoming restocks: Select date\n5️⃣ 📝 For upcoming: Add note about what will restock\n6️⃣ ✅ Report submitted for approval!', 
                         inline: false 
@@ -95,7 +100,7 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            // Create buttons - three buttons side by side
+            // Create buttons - four buttons (Discord allows 5 per row)
             const buttonRow = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -112,7 +117,12 @@ module.exports = {
                         .setCustomId('report_upcoming_restock_button_va')
                         .setLabel('Upcoming Restock')
                         .setStyle(ButtonStyle.Primary)
-                        .setEmoji('📅')
+                        .setEmoji('📅'),
+                    new ButtonBuilder()
+                        .setCustomId('check_store_button_va')
+                        .setLabel('Mark Store as Checked')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('✅')
                 );
 
             // Send message to channel
