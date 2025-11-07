@@ -2233,20 +2233,47 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
                 hours = 0;
             }
             
-            // Create date for TODAY at the specified time (local timezone)
-            // Use explicit date construction to avoid timezone issues
+            // Create date for TODAY at the specified time in Eastern timezone
+            // Since Railway servers run in UTC, we need to convert Eastern to UTC
+            // Eastern is UTC-5 (EST) or UTC-4 (EDT)
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
             const day = now.getDate();
             
-            // Create date in local timezone (this will be converted to UTC when saved)
-            checkedDate = new Date(year, month, day, hours, minutes, 0, 0);
+            // Determine if we're in EDT (Mar-Nov) or EST (Nov-Mar)
+            const isDST = isEasternDST(now);
+            const offsetHours = isDST ? 4 : 5; // EDT is UTC-4, EST is UTC-5 (we add this to convert to UTC)
+            
+            // Convert Eastern time to UTC by adding the offset
+            let utcHours = hours + offsetHours;
+            let utcDay = day;
+            let utcMonth = month;
+            let utcYear = year;
+            
+            // Handle day/month/year rollover
+            if (utcHours >= 24) {
+                utcHours -= 24;
+                utcDay++;
+                // Handle month rollover
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                if (utcDay > daysInMonth) {
+                    utcDay = 1;
+                    utcMonth++;
+                    if (utcMonth > 11) {
+                        utcMonth = 0;
+                        utcYear++;
+                    }
+                }
+            }
+            
+            // Create date in UTC
+            checkedDate = new Date(Date.UTC(utcYear, utcMonth, utcDay, utcHours, minutes, 0, 0));
             
             // Log for debugging
-            console.log(`🕐 Creating check date: ${year}-${month+1}-${day} ${hours}:${minutes} (local)`);
-            console.log(`🕐 ISO string: ${checkedDate.toISOString()}`);
-            console.log(`🕐 Current time: ${new Date().toISOString()}`);
+            console.log(`🕐 User selected: ${cachedData.hour}:${cachedData.minute} ${cachedData.amPm} Eastern (${isDST ? 'EDT' : 'EST'})`);
+            console.log(`🕐 Converted to UTC: ${checkedDate.toISOString()}`);
+            console.log(`🕐 Current UTC time: ${new Date().toISOString()}`);
         }
 
         // Update last checked with custom time (but don't store username for anonymity)
@@ -2279,6 +2306,46 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
             components: []
         });
     }
+}
+
+/**
+ * Check if a date is in Eastern Daylight Time (DST)
+ * DST runs from 2nd Sunday in March to 1st Sunday in November
+ */
+function isEasternDST(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-11
+    
+    // November (10) through February (1) are EST (not DST)
+    if (month < 2 || month > 10) return false;
+    
+    // March (2) through October (9) are EDT (DST)
+    if (month > 2 && month < 10) return true;
+    
+    // March: Check if after 2nd Sunday
+    if (month === 2) {
+        const secondSunday = getNthSunday(year, 3, 2);
+        return date >= secondSunday;
+    }
+    
+    // November: Check if before 1st Sunday
+    if (month === 10) {
+        const firstSunday = getNthSunday(year, 11, 1);
+        return date < firstSunday;
+    }
+    
+    return false;
+}
+
+/**
+ * Get the Nth Sunday of a given month
+ */
+function getNthSunday(year, month, n) {
+    const date = new Date(year, month - 1, 1);
+    const dayOfWeek = date.getDay();
+    const daysToAdd = (7 - dayOfWeek) % 7 + (n - 1) * 7;
+    date.setDate(1 + daysToAdd);
+    return date;
 }
 
 /**
