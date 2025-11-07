@@ -245,11 +245,6 @@ module.exports = {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'md');
                     return;
                 }
-                
-                if (customId === 'check_store_button_md') {
-                    await buttonHandlers.handleCheckStoreButtonClick(interaction, 'md');
-                    return;
-                }
 
                 // Handle check store current time button
                 if (customId.startsWith('check_store_current_va_')) {
