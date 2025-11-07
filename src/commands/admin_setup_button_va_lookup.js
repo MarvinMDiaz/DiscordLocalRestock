@@ -74,14 +74,29 @@ module.exports = {
                     },
                     { 
                         name: '💡 Quick Access', 
-                        value: 'Use `/lookup_va_restocks` to view restock status or `/view_last_checked_va` to see last checked stores!', 
+                        value: 'Click the buttons below to view restock status or see last checked stores!', 
                         inline: false 
                     }
                 )
                 .setTimestamp();
 
+            const buttonRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('lookup_restocks_button_va')
+                        .setLabel('View Restock Status')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('📊'),
+                    new ButtonBuilder()
+                        .setCustomId('last_checked_button_va')
+                        .setLabel('View Last Checked')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('⏰')
+                );
+
             await channel.send({
-                embeds: [embed]
+                embeds: [embed],
+                components: [buttonRow]
             });
 
             await interaction.editReply({

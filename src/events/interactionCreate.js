@@ -196,7 +196,7 @@ module.exports = {
             if (customId === 'last_checked_mode_va') {
                 const mode = interaction.values[0];
                 if (mode === 'all') {
-                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va');
+                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'va');
                 } else if (mode === 'specific') {
                     // Show store selection menu
                     await handleLastCheckedStoreSelect(interaction, 'va');
@@ -207,7 +207,7 @@ module.exports = {
             if (customId === 'last_checked_mode_md') {
                 const mode = interaction.values[0];
                 if (mode === 'all') {
-                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md');
+                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'md');
                 } else if (mode === 'specific') {
                     // Show store selection menu
                     await handleLastCheckedStoreSelect(interaction, 'md');
@@ -234,7 +234,7 @@ module.exports = {
                 const storeType = parts[parts.length - 1];
                 if (storeType !== 'type') {
                     const storeName = interaction.values[0];
-                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'va', storeName);
+                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'va', storeName);
                     return;
                 }
             }
@@ -244,7 +244,7 @@ module.exports = {
                 const storeType = parts[parts.length - 1];
                 if (storeType !== 'type') {
                     const storeName = interaction.values[0];
-                    await buttonHandlers.handleLastCheckedButtonClick(interaction, 'md', storeName);
+                    await buttonHandlers.handleLastCheckedDisplay(interaction, 'md', storeName);
                     return;
                 }
             }

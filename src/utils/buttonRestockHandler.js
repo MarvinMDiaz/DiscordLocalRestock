@@ -1786,9 +1786,39 @@ async function handleLookupButtonClick(interaction, region) {
 }
 
 /**
- * Handle last checked button click (VA/MD) - show all last checked stores or specific store
+ * Handle last checked button click (VA/MD) - show menu to choose all or specific store
  */
-async function handleLastCheckedButtonClick(interaction, region, specificStore = null) {
+async function handleLastCheckedButtonClick(interaction, region) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId(`last_checked_mode_${region}`)
+            .setPlaceholder('Choose how to view last checked stores...')
+            .addOptions(
+                { label: 'View All Last Checked Stores', value: 'all', emoji: '📋', description: 'Show all stores that have been checked' },
+                { label: 'Lookup Specific Store', value: 'specific', emoji: '🔍', description: 'Search for a specific store' }
+            );
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.editReply({
+            content: '**View Last Checked Stores**\n\nChoose an option:',
+            components: [row]
+        });
+
+    } catch (error) {
+        console.error(`❌ Error handling last checked button click (${region}):`, error);
+        await interaction.editReply({
+            content: '❌ There was an error. Please try again.'
+        });
+    }
+}
+
+/**
+ * Handle last checked stores display (all or specific store)
+ */
+async function handleLastCheckedDisplay(interaction, region, specificStore = null) {
     try {
         if (!interaction.deferred && !interaction.replied) {
             await interaction.deferReply({ ephemeral: true });
@@ -2862,6 +2892,7 @@ module.exports = {
     handleCustomStoreNameUpcoming,
     handleLookupButtonClick,
     handleLastCheckedButtonClick,
+    handleLastCheckedDisplay,
     handleCheckStoreButtonClick,
     handleCheckStoreTypeSelect,
     handleCheckStoreLocation,
