@@ -1,6 +1,7 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const dataManager = require('./dataManager');
 const configManager = require('./configManager');
+const interactionLogger = require('./interactionLogger');
 
 /**
  * Get admin role mentions for approval notifications

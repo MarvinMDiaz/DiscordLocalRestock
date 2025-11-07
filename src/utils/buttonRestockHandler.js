@@ -1332,6 +1332,22 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
                         embeds: [approvalEmbed],
                         components: [approvalRow]
                     });
+                    
+                    // Log the restock report
+                    try {
+                        const userId = interaction.user.id;
+                        const username = interaction.user.username;
+                        await interactionLogger.logRestockReport(interaction.client, {
+                            store: store,
+                            region: region,
+                            date: dateInput,
+                            time: restockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                            type: 'Upcoming',
+                            reporter: `${username} (${userId})`
+                        });
+                    } catch (logError) {
+                        console.error('❌ Error logging restock report:', logError);
+                    }
                 }
             }
         } catch (sendErr) {
@@ -2658,19 +2674,7 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
             console.error('❌ Error logging store check:', logError);
         }
 
-        const checkedTime = formatRestockDate(checkedDate.toISOString());
-        const checkedTimeRelative = getRelativeTime(checkedDate.toISOString());
-
-        // Log the store check
-        try {
-            await interactionLogger.logStoreCheck(interaction.client, {
-                store: store,
-                region: region,
-                time: `${checkedTime} (${checkedTimeRelative})`
-            });
-        } catch (logError) {
-            console.error('❌ Error logging store check:', logError);
-        }
+        const embed = new EmbedBuilder()
 
         const embed = new EmbedBuilder()
             .setColor(0x4CAF50)
