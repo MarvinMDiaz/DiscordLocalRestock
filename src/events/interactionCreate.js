@@ -216,14 +216,20 @@ module.exports = {
             }
 
             // Handle last checked store type selection
-            if (customId === `last_checked_store_${region}_type`) {
+            if (customId === 'last_checked_store_va_type') {
                 const storeType = interaction.values[0];
-                await handleLastCheckedStoreLocation(interaction, region, storeType);
+                await handleLastCheckedStoreLocation(interaction, 'va', storeType);
+                return;
+            }
+            
+            if (customId === 'last_checked_store_md_type') {
+                const storeType = interaction.values[0];
+                await handleLastCheckedStoreLocation(interaction, 'md', storeType);
                 return;
             }
 
             // Handle last checked store location selection (final selection)
-            if (customId.startsWith('last_checked_store_va_') && customId !== `last_checked_store_va_type`) {
+            if (customId.startsWith('last_checked_store_va_') && customId !== 'last_checked_store_va_type') {
                 const parts = customId.split('_');
                 const storeType = parts[parts.length - 1];
                 if (storeType !== 'type') {
@@ -233,7 +239,7 @@ module.exports = {
                 }
             }
             
-            if (customId.startsWith('last_checked_store_md_') && customId !== `last_checked_store_md_type`) {
+            if (customId.startsWith('last_checked_store_md_') && customId !== 'last_checked_store_md_type') {
                 const parts = customId.split('_');
                 const storeType = parts[parts.length - 1];
                 if (storeType !== 'type') {
