@@ -455,12 +455,17 @@ module.exports = {
             if (customId.startsWith('last_checked_store_va_') && customId !== 'last_checked_store_va_type') {
                 console.log(`🔍 [InteractionCreate] Handling last_checked_store_va location, customId: ${customId}`);
                 try {
+                    // Extract store type from customId (e.g., "last_checked_store_va_target" -> "target")
                     const parts = customId.split('_');
                     const storeType = parts[parts.length - 1];
-                    if (storeType !== 'type') {
+                    console.log(`🔍 [InteractionCreate] Extracted storeType: ${storeType} from customId: ${customId}`);
+                    
+                    if (storeType !== 'type' && storeType !== 'va' && storeType !== 'md') {
                         const storeName = interaction.values[0];
                         console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
                         await buttonHandlers.handleLastCheckedDisplay(interaction, 'va', storeName);
+                    } else {
+                        console.warn(`⚠️ [InteractionCreate] Invalid storeType extracted: ${storeType}`);
                     }
                 } catch (error) {
                     console.error(`❌ [InteractionCreate] Error in last_checked_store_va location handler:`, error);
@@ -472,12 +477,17 @@ module.exports = {
             if (customId.startsWith('last_checked_store_md_') && customId !== 'last_checked_store_md_type') {
                 console.log(`🔍 [InteractionCreate] Handling last_checked_store_md location, customId: ${customId}`);
                 try {
+                    // Extract store type from customId (e.g., "last_checked_store_md_target" -> "target")
                     const parts = customId.split('_');
                     const storeType = parts[parts.length - 1];
-                    if (storeType !== 'type') {
+                    console.log(`🔍 [InteractionCreate] Extracted storeType: ${storeType} from customId: ${customId}`);
+                    
+                    if (storeType !== 'type' && storeType !== 'va' && storeType !== 'md') {
                         const storeName = interaction.values[0];
                         console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
                         await buttonHandlers.handleLastCheckedDisplay(interaction, 'md', storeName);
+                    } else {
+                        console.warn(`⚠️ [InteractionCreate] Invalid storeType extracted: ${storeType}`);
                     }
                 } catch (error) {
                     console.error(`❌ [InteractionCreate] Error in last_checked_store_md location handler:`, error);
