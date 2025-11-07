@@ -5,7 +5,7 @@ async function handleLastCheckedStoreSelect(interaction, region) {
     console.log(`🔍 [handleLastCheckedStoreSelect] Starting for region: ${region}`);
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-        const config = require('../config/config.json');
+        const config = require('../../config/config.json');
         
         const storeTypeSelect = new StringSelectMenuBuilder()
             .setCustomId(`last_checked_store_${region}_type`)
@@ -35,7 +35,7 @@ async function handleLastCheckedStoreLocation(interaction, region, storeType) {
     console.log(`🔍 [handleLastCheckedStoreLocation] Starting for region: ${region}, storeType: ${storeType}`);
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-        const config = require('../config/config.json');
+        const config = require('../../config/config.json');
         const buttonHandlers = require('../utils/buttonRestockHandler');
         
         let stores = [];
