@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const dataManager = require('./dataManager');
 const configManager = require('./configManager');
 const config = require('../../config/config.json');
@@ -70,10 +70,455 @@ async function handleAdminButtonClick(interaction) {
 }
 
 /**
- * Handle clear restocks button
+ * Handle clear restocks button - shows warning and options
  */
 async function handleClearRestocks(interaction) {
     await interaction.deferReply({ ephemeral: true });
+
+    const allData = dataManager.getData();
+    const restockCount = allData.restocks ? allData.restocks.length : 0;
+    const cooldownCount = allData.cooldowns ? allData.cooldowns.length : 0;
+    const historyCount = allData.last_restocks ? allData.last_restocks.length : 0;
+
+    // Create backup before showing options
+    try {
+        await dataManager.backupData();
+        console.log('💾 Backup created before clear restocks operation');
+    } catch (backupErr) {
+        console.error('⚠️ Failed to create backup before clear:', backupErr);
+    }
+
+    const warningEmbed = new EmbedBuilder()
+        .setColor(0xFF6B6B)
+        .setTitle('⚠️ Clear Restocks - Warning')
+        .setDescription('**This action cannot be undone!** A backup has been created before proceeding.')
+        .addFields(
+            { name: '📊 Current Data', value: `**${restockCount}** restock reports\n**${cooldownCount}** cooldown entries\n**${historyCount}** store history entries`, inline: false },
+            { name: '💾 Backup', value: '✅ Backup created before proceeding', inline: false }
+        )
+        .setFooter({ text: 'Select an option below to proceed' })
+        .setTimestamp();
+
+    const actionSelect = new StringSelectMenuBuilder()
+        .setCustomId('admin_clear_restocks_action')
+        .setPlaceholder('Select what to clear...')
+        .addOptions(
+            { 
+                label: 'Clear All Restocks', 
+                value: 'all', 
+                emoji: '🗑️',
+                description: 'Clear all restocks, cooldowns, and history (DANGEROUS)' 
+            },
+            { 
+                label: 'Clear by Store', 
+                value: 'store', 
+                emoji: '🏪',
+                description: 'Clear restocks for a specific store' 
+            },
+            { 
+                label: 'Clear Today\'s Restocks', 
+                value: 'today', 
+                emoji: '📅',
+                description: 'Clear only restocks from today' 
+            },
+            { 
+                label: 'Clear Previous Week', 
+                value: 'previous_week', 
+                emoji: '📆',
+                description: 'Clear restocks from previous week only' 
+            }
+        );
+
+    const row = new ActionRowBuilder().addComponents(actionSelect);
+
+    await interaction.editReply({ 
+        embeds: [warningEmbed],
+        components: [row]
+    });
+}
+
+/**
+ * Handle clear restocks action selection
+ */
+async function handleClearRestocksAction(interaction) {
+    const action = interaction.values[0];
+
+    if (action === 'all') {
+        // Show final confirmation for clearing all
+        const confirmEmbed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('🚨 FINAL WARNING')
+            .setDescription('**You are about to delete ALL restock data!**\n\nThis includes:\n• All restock reports\n• All cooldowns\n• All store history\n\n**This cannot be undone!**')
+            .setFooter({ text: 'Click CONFIRM to proceed or CANCEL to abort' })
+            .setTimestamp();
+
+        const confirmRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('admin_clear_restocks_confirm_all')
+                    .setLabel('CONFIRM DELETE ALL')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('⚠️'),
+                new ButtonBuilder()
+                    .setCustomId('admin_clear_restocks_cancel')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('❌')
+            );
+
+        await interaction.update({ embeds: [confirmEmbed], components: [confirmRow] });
+    } else if (action === 'store') {
+        // Show store type selection
+        const storeTypeSelect = new StringSelectMenuBuilder()
+            .setCustomId('admin_clear_restocks_store_type')
+            .setPlaceholder('Select store type...')
+            .addOptions(
+                { label: 'Target', value: 'target', emoji: '🎯' },
+                { label: 'Best Buy', value: 'bestbuy', emoji: '💻' },
+                { label: 'Barnes & Noble', value: 'barnesandnoble', emoji: '📚' }
+            );
+
+        const row = new ActionRowBuilder().addComponents(storeTypeSelect);
+        await interaction.update({
+            content: '**Clear by Store**\nSelect store type:',
+            components: [row]
+        });
+    } else if (action === 'today') {
+        await handleClearTodayRestocks(interaction);
+    } else if (action === 'previous_week') {
+        await handleClearPreviousWeekRestocks(interaction);
+    }
+}
+
+/**
+ * Handle clear today's restocks
+ */
+async function handleClearTodayRestocks(interaction) {
+    await interaction.deferUpdate();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const allData = dataManager.getData();
+    const restocks = allData.restocks || [];
+    const cooldowns = allData.cooldowns || [];
+
+    // Filter restocks from today
+    const todayRestocks = restocks.filter(r => {
+        const restockDate = new Date(r.date || r.created_at);
+        return restockDate >= today && restockDate <= todayEnd;
+    });
+
+    // Filter cooldowns created today
+    const todayCooldowns = cooldowns.filter(c => {
+        const cooldownDate = new Date(c.created_at || c.date || Date.now());
+        return cooldownDate >= today && cooldownDate <= todayEnd;
+    });
+
+    // Remove today's restocks and cooldowns
+    allData.restocks = restocks.filter(r => {
+        const restockDate = new Date(r.date || r.created_at);
+        return !(restockDate >= today && restockDate <= todayEnd);
+    });
+
+    allData.cooldowns = cooldowns.filter(c => {
+        const cooldownDate = new Date(c.created_at || c.date || Date.now());
+        return !(cooldownDate >= today && cooldownDate <= todayEnd);
+    });
+
+    await dataManager.saveData();
+    await dataManager.reload();
+
+    const verifyData = dataManager.getData();
+    const verifyRestocks = verifyData.restocks ? verifyData.restocks.length : 0;
+    const verifyCooldowns = verifyData.cooldowns ? verifyData.cooldowns.length : 0;
+
+    const embed = new EmbedBuilder()
+        .setColor(0xFF6B6B)
+        .setTitle('🗑️ Today\'s Restocks Cleared')
+        .setDescription('All restocks and cooldowns from today have been cleared.')
+        .addFields(
+            { name: '📊 Restocks Removed', value: `${todayRestocks.length} restock reports`, inline: true },
+            { name: '⏰ Cooldowns Removed', value: `${todayCooldowns.length} cooldown entries`, inline: true },
+            { name: '✅ Verified', value: `Remaining: ${verifyRestocks} restocks, ${verifyCooldowns} cooldowns`, inline: false },
+            { name: '👤 Cleared By', value: interaction.user.username, inline: true }
+        )
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+    console.log(`✅ Admin ${interaction.user.username} cleared today's restocks (${todayRestocks.length} restocks, ${todayCooldowns.length} cooldowns)`);
+}
+
+/**
+ * Handle clear previous week restocks
+ */
+async function handleClearPreviousWeekRestocks(interaction) {
+    await interaction.deferUpdate();
+
+    const allData = dataManager.getData();
+    const restocks = allData.restocks || [];
+    const lastRestocks = allData.last_restocks || [];
+
+    // Get previous week start (last Monday)
+    const now = new Date();
+    const currentWeekStart = dataManager.getWeekStart(now);
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+    const previousWeekEnd = new Date(previousWeekStart);
+    previousWeekEnd.setDate(previousWeekEnd.getDate() + 6);
+    previousWeekEnd.setHours(23, 59, 59, 999);
+
+    // Filter restocks from previous week
+    const previousWeekRestocks = restocks.filter(r => {
+        const restockDate = new Date(r.date || r.created_at);
+        return restockDate >= previousWeekStart && restockDate <= previousWeekEnd;
+    });
+
+    // Remove previous week restocks
+    allData.restocks = restocks.filter(r => {
+        const restockDate = new Date(r.date || r.created_at);
+        return !(restockDate >= previousWeekStart && restockDate <= previousWeekEnd);
+    });
+
+    // Clear previous_week_restock_date from all stores
+    let clearedHistoryCount = 0;
+    lastRestocks.forEach(storeData => {
+        if (storeData.previous_week_restock_date) {
+            storeData.previous_week_restock_date = null;
+            clearedHistoryCount++;
+        }
+    });
+
+    await dataManager.saveData();
+    await dataManager.reload();
+
+    const verifyData = dataManager.getData();
+    const verifyRestocks = verifyData.restocks ? verifyData.restocks.length : 0;
+
+    const embed = new EmbedBuilder()
+        .setColor(0xFF6B6B)
+        .setTitle('🗑️ Previous Week Restocks Cleared')
+        .setDescription('All restocks from the previous week have been cleared.')
+        .addFields(
+            { name: '📊 Restocks Removed', value: `${previousWeekRestocks.length} restock reports`, inline: true },
+            { name: '📅 History Cleared', value: `${clearedHistoryCount} store previous week dates`, inline: true },
+            { name: '📆 Week Range', value: `${previousWeekStart.toLocaleDateString()} - ${previousWeekEnd.toLocaleDateString()}`, inline: false },
+            { name: '✅ Verified', value: `${verifyRestocks} restocks remaining`, inline: false },
+            { name: '👤 Cleared By', value: interaction.user.username, inline: true }
+        )
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+    console.log(`✅ Admin ${interaction.user.username} cleared previous week restocks (${previousWeekRestocks.length} restocks, ${clearedHistoryCount} history entries)`);
+}
+
+/**
+ * Handle clear restocks store type selection
+ */
+async function handleClearRestocksStoreType(interaction) {
+    const storeType = interaction.values[0];
+    
+    let stores = [];
+    if (storeType === 'target') {
+        stores = [
+            ...(config.stores.target.va || []),
+            ...(config.stores.target.md || [])
+        ];
+    } else if (storeType === 'bestbuy') {
+        stores = [
+            ...(config.stores.bestbuy.va || []),
+            ...(config.stores.bestbuy.md || [])
+        ];
+    } else if (storeType === 'barnesandnoble') {
+        stores = [
+            ...(config.stores.barnesandnoble.va || []),
+            ...(config.stores.barnesandnoble.md || [])
+        ];
+    }
+
+    if (stores.length === 0) {
+        return await interaction.update({
+            content: '❌ No stores found for this type.',
+            components: []
+        });
+    }
+
+    const locationOptions = stores.slice(0, 25).map(store => {
+        const parts = store.split(' - ');
+        const name = parts.length >= 2 ? parts.slice(1, 2).join(' - ') : parts[1];
+        return {
+            label: name.length > 100 ? name.substring(0, 97) + '...' : name,
+            value: store,
+            description: parts.length > 2 ? parts.slice(2).join(' - ') : undefined
+        };
+    });
+
+    const locationSelect = new StringSelectMenuBuilder()
+        .setCustomId(`admin_clear_restocks_store_${storeType}`)
+        .setPlaceholder('Select store location...')
+        .addOptions(locationOptions);
+
+    const row = new ActionRowBuilder().addComponents(locationSelect);
+
+    await interaction.update({
+        content: '**Clear by Store**\nSelect store location:',
+        components: [row]
+    });
+}
+
+/**
+ * Handle clear restocks store location selection
+ */
+async function handleClearRestocksStoreLocation(interaction) {
+    const customId = interaction.customId;
+    const storeType = customId.replace('admin_clear_restocks_store_', '');
+    const store = interaction.values[0];
+
+    // Show time period selection
+    const timeSelect = new StringSelectMenuBuilder()
+        .setCustomId(`admin_clear_restocks_store_time_${store}`)
+        .setPlaceholder('Select time period...')
+        .addOptions(
+            { 
+                label: 'Today Only', 
+                value: 'today', 
+                emoji: '📅',
+                description: 'Clear restocks from today for this store' 
+            },
+            { 
+                label: 'Previous Week', 
+                value: 'previous_week', 
+                emoji: '📆',
+                description: 'Clear restocks from previous week for this store' 
+            },
+            { 
+                label: 'All Time', 
+                value: 'all', 
+                emoji: '🗑️',
+                description: 'Clear ALL restocks for this store (DANGEROUS)' 
+            }
+        );
+
+    const row = new ActionRowBuilder().addComponents(timeSelect);
+
+    await interaction.update({
+        content: `**Clear Restocks for Store**\n**${store}**\n\nSelect time period:`,
+        components: [row]
+    });
+}
+
+/**
+ * Handle clear restocks store time period selection
+ */
+async function handleClearRestocksStoreTime(interaction) {
+    await interaction.deferUpdate();
+
+    const customId = interaction.customId;
+    const store = customId.replace('admin_clear_restocks_store_time_', '');
+    const timePeriod = interaction.values[0];
+
+    const allData = dataManager.getData();
+    const restocks = allData.restocks || [];
+    const cooldowns = allData.cooldowns || [];
+    const lastRestocks = allData.last_restocks || [];
+
+    let filteredRestocks = [];
+    let filteredCooldowns = [];
+    let clearedHistory = false;
+
+    if (timePeriod === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(today);
+        todayEnd.setHours(23, 59, 59, 999);
+
+        filteredRestocks = restocks.filter(r => {
+            if (r.store !== store) return true;
+            const restockDate = new Date(r.date || r.created_at);
+            return !(restockDate >= today && restockDate <= todayEnd);
+        });
+
+        filteredCooldowns = cooldowns.filter(c => {
+            if (c.store !== store) return true;
+            const cooldownDate = new Date(c.created_at || c.date || Date.now());
+            return !(cooldownDate >= today && cooldownDate <= todayEnd);
+        });
+    } else if (timePeriod === 'previous_week') {
+        const now = new Date();
+        const currentWeekStart = dataManager.getWeekStart(now);
+        const previousWeekStart = new Date(currentWeekStart);
+        previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+        const previousWeekEnd = new Date(previousWeekStart);
+        previousWeekEnd.setDate(previousWeekEnd.getDate() + 6);
+        previousWeekEnd.setHours(23, 59, 59, 999);
+
+        filteredRestocks = restocks.filter(r => {
+            if (r.store !== store) return true;
+            const restockDate = new Date(r.date || r.created_at);
+            return !(restockDate >= previousWeekStart && restockDate <= previousWeekEnd);
+        });
+
+        // Clear previous week history for this store
+        const storeHistoryIndex = lastRestocks.findIndex(r => r.store === store);
+        if (storeHistoryIndex >= 0 && lastRestocks[storeHistoryIndex].previous_week_restock_date) {
+            lastRestocks[storeHistoryIndex].previous_week_restock_date = null;
+            clearedHistory = true;
+        }
+    } else if (timePeriod === 'all') {
+        filteredRestocks = restocks.filter(r => r.store !== store);
+        filteredCooldowns = cooldowns.filter(c => c.store !== store);
+        
+        // Clear all history for this store
+        const storeHistoryIndex = lastRestocks.findIndex(r => r.store === store);
+        if (storeHistoryIndex >= 0) {
+            lastRestocks[storeHistoryIndex].current_week_restock_date = null;
+            lastRestocks[storeHistoryIndex].previous_week_restock_date = null;
+            clearedHistory = true;
+        }
+    }
+
+    const removedRestocks = restocks.length - filteredRestocks.length;
+    const removedCooldowns = cooldowns.length - filteredCooldowns.length;
+
+    allData.restocks = filteredRestocks;
+    allData.cooldowns = filteredCooldowns;
+    allData.last_restocks = lastRestocks;
+
+    await dataManager.saveData();
+    await dataManager.reload();
+
+    const verifyData = dataManager.getData();
+    const verifyRestocks = verifyData.restocks ? verifyData.restocks.filter(r => r.store === store).length : 0;
+    const verifyCooldowns = verifyData.cooldowns ? verifyData.cooldowns.filter(c => c.store === store).length : 0;
+
+    const timeLabel = timePeriod === 'today' ? 'Today' : timePeriod === 'previous_week' ? 'Previous Week' : 'All Time';
+
+    const embed = new EmbedBuilder()
+        .setColor(0xFF6B6B)
+        .setTitle('🗑️ Store Restocks Cleared')
+        .setDescription(`Restocks cleared for **${store}**`)
+        .addFields(
+            { name: '🏪 Store', value: store, inline: false },
+            { name: '⏰ Time Period', value: timeLabel, inline: true },
+            { name: '📊 Restocks Removed', value: `${removedRestocks} restock reports`, inline: true },
+            { name: '⏰ Cooldowns Removed', value: `${removedCooldowns} cooldown entries`, inline: true },
+            { name: '📅 History Cleared', value: clearedHistory ? 'Yes' : 'No', inline: true },
+            { name: '✅ Verified', value: `${verifyRestocks} restocks, ${verifyCooldowns} cooldowns remaining for this store`, inline: false },
+            { name: '👤 Cleared By', value: interaction.user.username, inline: true }
+        )
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+    console.log(`✅ Admin ${interaction.user.username} cleared ${timeLabel} restocks for ${store} (${removedRestocks} restocks, ${removedCooldowns} cooldowns)`);
+}
+
+/**
+ * Handle confirm clear all restocks
+ */
+async function handleConfirmClearAll(interaction) {
+    await interaction.deferUpdate();
 
     const allData = dataManager.getData();
     const restockCount = allData.restocks ? allData.restocks.length : 0;
@@ -94,19 +539,35 @@ async function handleClearRestocks(interaction) {
 
     const embed = new EmbedBuilder()
         .setColor(0xFF6B6B)
-        .setTitle('🗑️ Restock Data Cleared')
-        .setDescription('All restock data has been cleared from the database.')
+        .setTitle('🗑️ All Restock Data Cleared')
+        .setDescription('**All restock data has been cleared from the database.**')
         .addFields(
             { name: '📊 Restocks Removed', value: `${restockCount} restock reports`, inline: true },
             { name: '⏰ Cooldowns Removed', value: `${cooldownCount} cooldown entries`, inline: true },
             { name: '📅 History Cleared', value: `${historyCount} store history entries`, inline: true },
             { name: '✅ Verified', value: `Restocks: ${verifyRestocks}, Cooldowns: ${verifyCooldowns}, History: ${verifyHistory}`, inline: false },
+            { name: '💾 Backup', value: '✅ Backup created before clearing', inline: false },
             { name: '👤 Cleared By', value: interaction.user.username, inline: true }
         )
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
-    console.log(`✅ Admin ${interaction.user.username} cleared restock data via button`);
+    await interaction.editReply({ embeds: [embed], components: [] });
+    console.log(`✅ Admin ${interaction.user.username} cleared all restock data via button (${restockCount} restocks, ${cooldownCount} cooldowns, ${historyCount} history)`);
+}
+
+/**
+ * Handle cancel clear restocks
+ */
+async function handleCancelClearRestocks(interaction) {
+    await interaction.deferUpdate();
+
+    const embed = new EmbedBuilder()
+        .setColor(0x4CAF50)
+        .setTitle('✅ Operation Cancelled')
+        .setDescription('Clear restocks operation has been cancelled. No data was modified.')
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed], components: [] });
 }
 
 /**
@@ -723,6 +1184,12 @@ module.exports = {
     handleStoreRemove,
     handleRoleAction,
     handleRoleAdd,
-    handleRoleRemove
+    handleRoleRemove,
+    handleClearRestocksAction,
+    handleClearRestocksStoreType,
+    handleClearRestocksStoreLocation,
+    handleClearRestocksStoreTime,
+    handleConfirmClearAll,
+    handleCancelClearRestocks
 };
 

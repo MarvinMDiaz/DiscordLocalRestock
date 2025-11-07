@@ -166,6 +166,17 @@ module.exports = {
                         return;
                     }
                     
+                    // Handle clear restocks confirmation buttons
+                    if (customId === 'admin_clear_restocks_confirm_all') {
+                        await adminHandlers.handleConfirmClearAll(interaction);
+                        return;
+                    }
+                    
+                    if (customId === 'admin_clear_restocks_cancel') {
+                        await adminHandlers.handleCancelClearRestocks(interaction);
+                        return;
+                    }
+                    
                     await adminHandlers.handleAdminButtonClick(interaction);
                     return;
                 }
@@ -250,6 +261,30 @@ module.exports = {
             // Handle admin remove cooldown location selection
             if (customId.startsWith('admin_remove_cooldown_location_')) {
                 await adminHandlers.handleRemoveCooldownLocation(interaction);
+                return;
+            }
+
+            // Handle admin clear restocks action selection
+            if (customId === 'admin_clear_restocks_action') {
+                await adminHandlers.handleClearRestocksAction(interaction);
+                return;
+            }
+
+            // Handle admin clear restocks store type selection
+            if (customId === 'admin_clear_restocks_store_type') {
+                await adminHandlers.handleClearRestocksStoreType(interaction);
+                return;
+            }
+
+            // Handle admin clear restocks store location selection
+            if (customId.startsWith('admin_clear_restocks_store_') && !customId.includes('_time_')) {
+                await adminHandlers.handleClearRestocksStoreLocation(interaction);
+                return;
+            }
+
+            // Handle admin clear restocks store time period selection
+            if (customId.startsWith('admin_clear_restocks_store_time_')) {
+                await adminHandlers.handleClearRestocksStoreTime(interaction);
                 return;
             }
 

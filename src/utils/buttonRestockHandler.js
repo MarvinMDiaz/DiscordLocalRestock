@@ -1550,6 +1550,31 @@ function generateId() {
 }
 
 /**
+ * Get store type from store name
+ */
+function getStoreType(storeName) {
+    if (!storeName) return 'other';
+    const name = storeName.toLowerCase();
+    if (name.startsWith('target')) return 'target';
+    if (name.startsWith('best buy')) return 'bestbuy';
+    if (name.startsWith('barnes') || name.startsWith('b&n')) return 'barnesandnoble';
+    return 'other';
+}
+
+/**
+ * Get store type display name and emoji
+ */
+function getStoreTypeDisplay(storeType) {
+    const types = {
+        'target': { name: 'Target', emoji: '🎯', color: 0xCC0000 },
+        'bestbuy': { name: 'Best Buy', emoji: '💻', color: 0xFFFF00 },
+        'barnesandnoble': { name: 'Barnes & Noble', emoji: '📚', color: 0x0066CC },
+        'other': { name: 'Other Stores', emoji: '🏪', color: 0x808080 }
+    };
+    return types[storeType] || types['other'];
+}
+
+/**
  * Handle lookup button click (VA/MD)
  */
 async function handleLookupButtonClick(interaction, region) {
@@ -1602,56 +1627,124 @@ async function handleLookupButtonClick(interaction, region) {
             }
         }
 
-        // Create embed
-        const embed = new EmbedBuilder()
-            .setColor(0x00BFFF) // Blue
-            .setTitle('📊 Restock Status - Weekly Overview')
-            .setDescription(isVA ? 'Showing restock dates for Virginia stores' : 'Showing restock dates for Maryland stores')
-            .setTimestamp();
+        // Group stores by store type
+        const storesByType = {
+            'target': [],
+            'bestbuy': [],
+            'barnesandnoble': [],
+            'other': []
+        };
 
-        // Add fields for each store showing current and previous week dates
-        // Discord limit: 25 fields per embed, 6000 characters total
-        let fieldCount = 0;
         for (const storeData of regionRestocks) {
-            if (fieldCount >= 25) break; // Discord limit
+            const storeType = getStoreType(storeData.store);
+            storesByType[storeType] = storesByType[storeType] || [];
+            storesByType[storeType].push(storeData);
+        }
 
-            try {
-                const currentWeekDate = storeData.current_week_restock_date
-                    ? formatRestockDate(storeData.current_week_restock_date)
-                    : 'Not Restocked';
+        // Create embeds for each store type (only if they have stores)
+        const embeds = [];
+        const storeTypeOrder = ['target', 'bestbuy', 'barnesandnoble', 'other'];
 
-                const previousWeekDate = storeData.previous_week_restock_date
-                    ? formatRestockDate(storeData.previous_week_restock_date)
-                    : 'N/A';
+        for (const storeType of storeTypeOrder) {
+            const stores = storesByType[storeType];
+            if (!stores || stores.length === 0) continue;
 
-                const storeName = storeData.store || 'Unknown Store';
-                const fieldValue = `**Current Week Restock Date:** ${currentWeekDate}\n**Previous Week Restock Date:** ${previousWeekDate}`;
+            const typeDisplay = getStoreTypeDisplay(storeType);
+            const embed = new EmbedBuilder()
+                .setColor(typeDisplay.color)
+                .setTitle(`${typeDisplay.emoji} ${typeDisplay.name} - Restock Status`)
+                .setDescription(isVA ? `Showing restock dates for ${typeDisplay.name} stores in Virginia` : `Showing restock dates for ${typeDisplay.name} stores in Maryland`)
+                .setTimestamp();
 
-                embed.addFields({
-                    name: `🏪 ${storeName}`,
-                    value: fieldValue,
-                    inline: false
+            // Add fields for each store showing current and previous week dates
+            // Discord limit: 25 fields per embed, 6000 characters total
+            let fieldCount = 0;
+            for (const storeData of stores) {
+                if (fieldCount >= 25) break; // Discord limit
+
+                try {
+                    const currentWeekDate = storeData.current_week_restock_date
+                        ? formatRestockDate(storeData.current_week_restock_date)
+                        : 'Not Restocked';
+
+                    const previousWeekDate = storeData.previous_week_restock_date
+                        ? formatRestockDate(storeData.previous_week_restock_date)
+                        : 'N/A';
+
+                    // Extract store name without the store type prefix for cleaner display
+                    const storeName = storeData.store || 'Unknown Store';
+                    let displayName = storeName;
+                    
+                    // Remove store type prefix if present
+                    if (storeType === 'target' && displayName.toLowerCase().startsWith('target - ')) {
+                        displayName = displayName.substring(9);
+                    } else if (storeType === 'bestbuy' && displayName.toLowerCase().startsWith('best buy - ')) {
+                        displayName = displayName.substring(12);
+                    } else if (storeType === 'barnesandnoble' && displayName.toLowerCase().startsWith('barnes & noble - ')) {
+                        displayName = displayName.substring(18);
+                    }
+
+                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}`;
+
+                    embed.addFields({
+                        name: `🏪 ${displayName}`,
+                        value: fieldValue,
+                        inline: false
+                    });
+                    fieldCount++;
+                } catch (fieldError) {
+                    console.error(`Error processing store ${storeData.store}:`, fieldError);
+                    // Skip this store if there's an error
+                    continue;
+                }
+            }
+
+            embeds.push(embed);
+        }
+
+        // Add footer to the last embed
+        if (embeds.length > 0) {
+            embeds[embeds.length - 1].setFooter({
+                text: `Data resets weekly on ${config.settings?.cleanupDay || 'Sunday'}`
+            });
+        }
+
+        // Discord allows up to 10 embeds per message
+        if (embeds.length === 0) {
+            if (interaction.deferred) {
+                return await interaction.editReply({
+                    content: '📭 **No stores have reported restocks this week.**'
                 });
-                fieldCount++;
-            } catch (fieldError) {
-                console.error(`Error processing store ${storeData.store}:`, fieldError);
-                // Skip this store if there's an error
-                continue;
+            } else {
+                return await interaction.reply({
+                    content: '📭 **No stores have reported restocks this week.**',
+                    ephemeral: true
+                });
             }
         }
 
-        // Add footer
-        embed.setFooter({
-            text: `Data resets weekly on ${config.settings?.cleanupDay || 'Sunday'}`
-        });
+        // Split embeds into chunks of 10 if needed (Discord limit)
+        const embedChunks = [];
+        for (let i = 0; i < embeds.length; i += 10) {
+            embedChunks.push(embeds.slice(i, i + 10));
+        }
 
+        // Send first chunk
         if (interaction.deferred) {
             await interaction.editReply({
-                embeds: [embed]
+                embeds: embedChunks[0]
             });
         } else {
             await interaction.reply({
-                embeds: [embed],
+                embeds: embedChunks[0],
+                ephemeral: true
+            });
+        }
+
+        // Send remaining chunks as follow-ups if needed
+        for (let i = 1; i < embedChunks.length; i++) {
+            await interaction.followUp({
+                embeds: embedChunks[i],
                 ephemeral: true
             });
         }
