@@ -1853,7 +1853,16 @@ async function handleLastCheckedButtonClick(interaction, region) {
  */
 async function handleLastCheckedDisplay(interaction, region, specificStore = null) {
     try {
-        if (!interaction.deferred && !interaction.replied) {
+        console.log(`🔍 [handleLastCheckedDisplay] Starting for region: ${region}, specificStore: ${specificStore || 'all'}`);
+        console.log(`🔍 [handleLastCheckedDisplay] Interaction type: ${interaction.type}, replied: ${interaction.replied}, deferred: ${interaction.deferred}`);
+        
+        // For select menu interactions, we need to defer or update first
+        if (interaction.isStringSelectMenu()) {
+            if (!interaction.deferred && !interaction.replied) {
+                console.log(`🔍 [handleLastCheckedDisplay] Deferring update for select menu interaction`);
+                await interaction.deferUpdate();
+            }
+        } else if (!interaction.deferred && !interaction.replied) {
             await interaction.deferReply({ ephemeral: true });
         }
 
@@ -1915,6 +1924,7 @@ async function handleLastCheckedDisplay(interaction, region, specificStore = nul
 
         // If showing specific store, create a single embed
         if (specificStore && checkedStores.length > 0) {
+            console.log(`🔍 [handleLastCheckedDisplay] Showing specific store: ${specificStore}`);
             const storeData = checkedStores[0];
             const checkedDate = formatRestockDate(storeData.last_checked_date);
             const checkedTime = formatTime(storeData.last_checked_date);
@@ -1932,7 +1942,21 @@ async function handleLastCheckedDisplay(interaction, region, specificStore = nul
                 .setFooter({ text: 'Last checked times help others know when stores were recently visited' })
                 .setTimestamp();
 
-            return await interaction.editReply({ embeds: [embed] });
+            console.log(`🔍 [handleLastCheckedDisplay] Attempting to edit reply with embed`);
+            try {
+                if (interaction.deferred) {
+                    await interaction.editReply({ embeds: [embed] });
+                } else if (interaction.replied) {
+                    await interaction.followUp({ embeds: [embed], flags: 64 });
+                } else {
+                    await interaction.update({ embeds: [embed] });
+                }
+                console.log(`✅ [handleLastCheckedDisplay] Successfully displayed specific store`);
+            } catch (replyError) {
+                console.error(`❌ [handleLastCheckedDisplay] Error replying with embed:`, replyError);
+                throw replyError;
+            }
+            return;
         }
 
         // Group stores by store type (for "all" view)
