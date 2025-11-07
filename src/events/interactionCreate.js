@@ -240,8 +240,9 @@ module.exports = {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');
                     return;
                 }
-                if (customId === 'check_store_button_va') {
-                    await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');
+                
+                if (customId === 'check_store_button_md') {
+                    await buttonHandlers.handleCheckStoreButtonClick(interaction, 'md');
                     return;
                 }
                 
