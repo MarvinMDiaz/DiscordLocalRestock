@@ -6,6 +6,26 @@ const config = require('../../config/config.json');
 const modalDataCache = new Map();
 
 /**
+ * Format time as "HH:MM AM/PM" (e.g., "10:00 AM")
+ */
+function formatTime(dateString) {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const amPm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    
+    const minutesStr = minutes.toString().padStart(2, '0');
+    return `${hours}:${minutesStr} ${amPm}`;
+}
+
+/**
  * Format date as "Day MM/DD/YY" (e.g., "Saturday 11/01/25")
  */
 function formatRestockDate(dateString) {
@@ -1684,7 +1704,7 @@ async function handleLookupButtonClick(interaction, region) {
                         displayName = displayName.substring(18);
                     }
 
-                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} (${getRelativeTime(new Date(storeData.last_checked_date))})` : ''}`;
+                    const fieldValue = `**Current Week:** ${currentWeekDate}\n**Previous Week:** ${previousWeekDate}${storeData.last_checked_date ? `\n**Last Checked:** ${formatRestockDate(storeData.last_checked_date)} at ${formatTime(storeData.last_checked_date)} (${getRelativeTime(new Date(storeData.last_checked_date))})` : ''}`;
 
                     embed.addFields({
                         name: `🏪 ${displayName}`,
@@ -2213,8 +2233,9 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
                 hours = 0;
             }
             
-            checkedDate = new Date();
-            checkedDate.setHours(hours, minutes, 0, 0);
+            // Create date for TODAY at the specified time (local timezone)
+            const now = new Date();
+            checkedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
         }
 
         // Update last checked with custom time (but don't store username for anonymity)
