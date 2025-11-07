@@ -2,74 +2,94 @@ const { Events } = require('discord.js');
 
 // Helper function to handle last checked store selection
 async function handleLastCheckedStoreSelect(interaction, region) {
-    const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-    const config = require('../config/config.json');
-    
-    const storeTypeSelect = new StringSelectMenuBuilder()
-        .setCustomId(`last_checked_store_${region}_type`)
-        .setPlaceholder('Select store type...')
-        .addOptions(
-            { label: 'Target', value: 'target', emoji: '🎯' },
-            { label: 'Best Buy', value: 'bestbuy', emoji: '💻' },
-            { label: 'Barnes & Noble', value: 'barnesandnoble', emoji: '📚' }
-        );
+    console.log(`🔍 [handleLastCheckedStoreSelect] Starting for region: ${region}`);
+    try {
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        const config = require('../config/config.json');
+        
+        const storeTypeSelect = new StringSelectMenuBuilder()
+            .setCustomId(`last_checked_store_${region}_type`)
+            .setPlaceholder('Select store type...')
+            .addOptions(
+                { label: 'Target', value: 'target', emoji: '🎯' },
+                { label: 'Best Buy', value: 'bestbuy', emoji: '💻' },
+                { label: 'Barnes & Noble', value: 'barnesandnoble', emoji: '📚' }
+            );
 
-    const row = new ActionRowBuilder().addComponents(storeTypeSelect);
+        const row = new ActionRowBuilder().addComponents(storeTypeSelect);
 
-    await interaction.update({
-        content: '**Lookup Specific Store**\nSelect the store type:',
-        components: [row]
-    });
+        console.log(`🔍 [handleLastCheckedStoreSelect] Updating interaction for region: ${region}`);
+        await interaction.update({
+            content: '**Lookup Specific Store**\nSelect the store type:',
+            components: [row]
+        });
+        console.log(`✅ [handleLastCheckedStoreSelect] Successfully updated for region: ${region}`);
+    } catch (error) {
+        console.error(`❌ [handleLastCheckedStoreSelect] Error for region ${region}:`, error);
+        console.error(`❌ [handleLastCheckedStoreSelect] Error stack:`, error.stack);
+        throw error;
+    }
 }
 
 async function handleLastCheckedStoreLocation(interaction, region, storeType) {
-    const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-    const config = require('../config/config.json');
-    const buttonHandlers = require('../utils/buttonRestockHandler');
-    
-    let stores = [];
-    if (storeType === 'target') {
-        stores = region === 'va' 
-            ? (config.stores?.target?.va || [])
-            : (config.stores?.target?.md || []);
-    } else if (storeType === 'bestbuy') {
-        stores = region === 'va'
-            ? (config.stores?.bestbuy?.va || [])
-            : (config.stores?.bestbuy?.md || []);
-    } else if (storeType === 'barnesandnoble') {
-        stores = region === 'va'
-            ? (config.stores?.barnesandnoble?.va || [])
-            : (config.stores?.barnesandnoble?.md || []);
-    }
+    console.log(`🔍 [handleLastCheckedStoreLocation] Starting for region: ${region}, storeType: ${storeType}`);
+    try {
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        const config = require('../config/config.json');
+        const buttonHandlers = require('../utils/buttonRestockHandler');
+        
+        let stores = [];
+        if (storeType === 'target') {
+            stores = region === 'va' 
+                ? (config.stores?.target?.va || [])
+                : (config.stores?.target?.md || []);
+        } else if (storeType === 'bestbuy') {
+            stores = region === 'va'
+                ? (config.stores?.bestbuy?.va || [])
+                : (config.stores?.bestbuy?.md || []);
+        } else if (storeType === 'barnesandnoble') {
+            stores = region === 'va'
+                ? (config.stores?.barnesandnoble?.va || [])
+                : (config.stores?.barnesandnoble?.md || []);
+        }
 
-    if (stores.length === 0) {
-        return await interaction.update({
-            content: '❌ No stores found for this type.',
-            components: []
+        console.log(`🔍 [handleLastCheckedStoreLocation] Found ${stores.length} stores for ${storeType} in ${region}`);
+
+        if (stores.length === 0) {
+            return await interaction.update({
+                content: '❌ No stores found for this type.',
+                components: []
+            });
+        }
+
+        const locationOptions = stores.slice(0, 25).map(store => {
+            const parts = store.split(' - ');
+            const name = parts.length >= 2 ? parts.slice(1, 2).join(' - ') : parts[1];
+            return {
+                label: name.length > 100 ? name.substring(0, 97) + '...' : name,
+                value: store,
+                description: parts.length > 2 ? parts.slice(2).join(' - ') : undefined
+            };
         });
+
+        const locationSelect = new StringSelectMenuBuilder()
+            .setCustomId(`last_checked_store_${region}_${storeType}`)
+            .setPlaceholder('Select store location...')
+            .addOptions(locationOptions);
+
+        const row = new ActionRowBuilder().addComponents(locationSelect);
+
+        console.log(`🔍 [handleLastCheckedStoreLocation] Updating interaction with ${locationOptions.length} store options`);
+        await interaction.update({
+            content: '**Lookup Specific Store**\nSelect the store location:',
+            components: [row]
+        });
+        console.log(`✅ [handleLastCheckedStoreLocation] Successfully updated`);
+    } catch (error) {
+        console.error(`❌ [handleLastCheckedStoreLocation] Error for region ${region}, storeType ${storeType}:`, error);
+        console.error(`❌ [handleLastCheckedStoreLocation] Error stack:`, error.stack);
+        throw error;
     }
-
-    const locationOptions = stores.slice(0, 25).map(store => {
-        const parts = store.split(' - ');
-        const name = parts.length >= 2 ? parts.slice(1, 2).join(' - ') : parts[1];
-        return {
-            label: name.length > 100 ? name.substring(0, 97) + '...' : name,
-            value: store,
-            description: parts.length > 2 ? parts.slice(2).join(' - ') : undefined
-        };
-    });
-
-    const locationSelect = new StringSelectMenuBuilder()
-        .setCustomId(`last_checked_store_${region}_${storeType}`)
-        .setPlaceholder('Select store location...')
-        .addOptions(locationOptions);
-
-    const row = new ActionRowBuilder().addComponents(locationSelect);
-
-    await interaction.update({
-        content: '**Lookup Specific Store**\nSelect the store location:',
-        components: [row]
-    });
 }
 
 module.exports = {
