@@ -45,7 +45,7 @@ function formatTime(dateString) {
     
     // Format as 12-hour time
     let hours = easternHours;
-    const minutes = easternMinutes;
+    const minutes = utcMinutes;
     const amPm = hours >= 12 ? 'PM' : 'AM';
     
     hours = hours % 12;
