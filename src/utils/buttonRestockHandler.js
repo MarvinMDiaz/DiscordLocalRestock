@@ -1790,6 +1790,10 @@ async function handleLookupButtonClick(interaction, region) {
  */
 async function handleLastCheckedButtonClick(interaction, region) {
     try {
+        console.log(`🔍 [Last Checked Button] Starting handler for region: ${region}`);
+        console.log(`🔍 [Last Checked Button] Interaction type: ${interaction.type}`);
+        console.log(`🔍 [Last Checked Button] Interaction replied: ${interaction.replied}, deferred: ${interaction.deferred}`);
+
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`last_checked_mode_${region}`)
             .setPlaceholder('Choose how to view last checked stores...')
@@ -1800,23 +1804,46 @@ async function handleLastCheckedButtonClick(interaction, region) {
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
+        console.log(`🔍 [Last Checked Button] Created select menu with customId: last_checked_mode_${region}`);
+        console.log(`🔍 [Last Checked Button] Attempting to reply...`);
+
         await interaction.reply({
             content: '**View Last Checked Stores**\n\nChoose an option:',
             components: [row],
             ephemeral: true
         });
 
+        console.log(`✅ [Last Checked Button] Successfully replied for region: ${region}`);
+
     } catch (error) {
-        console.error(`❌ Error handling last checked button click (${region}):`, error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                content: '❌ There was an error. Please try again.',
-                ephemeral: true
-            });
-        } else if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ There was an error. Please try again.'
-            });
+        console.error(`❌ [Last Checked Button] Error handling last checked button click (${region}):`, error);
+        console.error(`❌ [Last Checked Button] Error stack:`, error.stack);
+        console.error(`❌ [Last Checked Button] Error details:`, {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            status: error.status,
+            statusCode: error.statusCode
+        });
+        
+        try {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ There was an error. Please try again.',
+                    ephemeral: true
+                });
+            } else if (interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ There was an error. Please try again.'
+                });
+            } else {
+                await interaction.followUp({
+                    content: '❌ There was an error. Please try again.',
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error(`❌ [Last Checked Button] Failed to send error message:`, replyError);
         }
     }
 }
