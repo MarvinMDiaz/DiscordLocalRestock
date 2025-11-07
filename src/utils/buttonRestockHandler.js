@@ -2034,20 +2034,74 @@ async function handleLastCheckedDisplay(interaction, region, specificStore = nul
 
         // Discord allows up to 10 embeds per message
         if (embeds.length === 0) {
-            return await interaction.editReply({
-                content: '📭 **No stores have been marked as checked yet.**'
-            });
+            try {
+                if (interaction.deferred) {
+                    return await interaction.editReply({
+                        content: '📭 **No stores have been marked as checked yet.**'
+                    });
+                } else if (interaction.replied) {
+                    return await interaction.followUp({
+                        content: '📭 **No stores have been marked as checked yet.**',
+                        flags: 64
+                    });
+                } else {
+                    return await interaction.update({
+                        content: '📭 **No stores have been marked as checked yet.**'
+                    });
+                }
+            } catch (updateError) {
+                console.error(`❌ [handleLastCheckedDisplay] Error updating empty message:`, updateError);
+                throw updateError;
+            }
         }
 
         // Send embeds (Discord allows up to 10 embeds per message)
         const embedsToSend = embeds.slice(0, 10);
-        await interaction.editReply({ embeds: embedsToSend });
+        console.log(`🔍 [handleLastCheckedDisplay] Sending ${embedsToSend.length} embeds`);
+        try {
+            if (interaction.deferred) {
+                await interaction.editReply({ embeds: embedsToSend });
+            } else if (interaction.replied) {
+                await interaction.followUp({ embeds: embedsToSend, flags: 64 });
+            } else {
+                await interaction.update({ embeds: embedsToSend });
+            }
+            console.log(`✅ [handleLastCheckedDisplay] Successfully displayed all stores`);
+        } catch (replyError) {
+            console.error(`❌ [handleLastCheckedDisplay] Error sending embeds:`, replyError);
+            throw replyError;
+        }
 
     } catch (error) {
-        console.error(`❌ Error handling last checked button click (${region}):`, error);
-        await interaction.editReply({
-            content: '❌ There was an error retrieving last checked stores. Please try again.'
+        console.error(`❌ [handleLastCheckedDisplay] Error handling last checked display (${region}):`, error);
+        console.error(`❌ [handleLastCheckedDisplay] Error stack:`, error.stack);
+        console.error(`❌ [handleLastCheckedDisplay] Error details:`, {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            status: error.status,
+            statusCode: error.statusCode
         });
+        
+        try {
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ There was an error retrieving last checked stores. Please try again.'
+                });
+            } else if (interaction.replied) {
+                await interaction.followUp({
+                    content: '❌ There was an error retrieving last checked stores. Please try again.',
+                    flags: 64
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ There was an error retrieving last checked stores. Please try again.',
+                    flags: 64
+                });
+            }
+        } catch (replyError) {
+            console.error(`❌ [handleLastCheckedDisplay] Failed to send error message:`, replyError);
+        }
     }
 }
 
