@@ -1,4 +1,5 @@
 const { Events } = require('discord.js');
+const interactionLogger = require('../utils/interactionLogger');
 
 // Helper function to handle last checked store selection
 async function handleLastCheckedStoreSelect(interaction, region) {
@@ -116,6 +117,13 @@ module.exports = {
 
         // Handle slash commands
         if (interaction.isChatInputCommand()) {
+            // Log the command
+            try {
+                await interactionLogger.logCommand(interaction);
+            } catch (logError) {
+                console.error('❌ Error logging command:', logError);
+            }
+
             const command = interaction.client.commands.get(interaction.commandName);
 
             if (!command) {
@@ -151,6 +159,13 @@ module.exports = {
 
         // Handle button interactions (for approval workflow)
         if (interaction.isButton()) {
+            // Log the button click
+            try {
+                await interactionLogger.logButton(interaction);
+            } catch (logError) {
+                console.error('❌ Error logging button:', logError);
+            }
+
             try {
                 const { customId } = interaction;
 
@@ -385,6 +400,13 @@ module.exports = {
 
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
+            // Log the select menu interaction
+            try {
+                await interactionLogger.logSelectMenu(interaction);
+            } catch (logError) {
+                console.error('❌ Error logging select menu:', logError);
+            }
+
             const { customId } = interaction;
             const buttonHandlers = require('../utils/buttonRestockHandler');
             const adminHandlers = require('../utils/adminButtonHandler');
@@ -740,6 +762,13 @@ module.exports = {
 
         // Handle modal submissions
         if (interaction.isModalSubmit()) {
+            // Log the modal submission
+            try {
+                await interactionLogger.logModal(interaction);
+            } catch (logError) {
+                console.error('❌ Error logging modal:', logError);
+            }
+
             const { customId } = interaction;
             if (customId.startsWith('approve_note_modal_')) {
                 const { handleApproveWithNoteSubmit } = require('../utils/approvalManager');

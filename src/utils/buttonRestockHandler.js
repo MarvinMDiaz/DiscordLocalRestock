@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const dataManager = require('./dataManager');
 const config = require('../../config/config.json');
+const interactionLogger = require('./interactionLogger');
 
 // Temporary storage for modal data (since customId has 100 char limit)
 const modalDataCache = new Map();
@@ -721,6 +722,20 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
                         embeds: [approvalEmbed],
                         components: [approvalRow]
                     });
+                    
+                    // Log the restock report
+                    try {
+                        await interactionLogger.logRestockReport(interaction.client, {
+                            store: store,
+                            region: region,
+                            date: dateInput,
+                            time: restockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                            type: 'Past',
+                            reporter: `${username} (${userId})`
+                        });
+                    } catch (logError) {
+                        console.error('❌ Error logging restock report:', logError);
+                    }
                 }
             }
         } catch (sendErr) {
@@ -2632,6 +2647,31 @@ async function finalizeCheckStoreTime(interaction, region, sessionId, cachedData
         const checkedTime = formatRestockDate(checkedDate.toISOString());
         const checkedTimeRelative = getRelativeTime(checkedDate.toISOString());
 
+        // Log the store check
+        try {
+            await interactionLogger.logStoreCheck(interaction.client, {
+                store: store,
+                region: region,
+                time: `${checkedTime} (${checkedTimeRelative})`
+            });
+        } catch (logError) {
+            console.error('❌ Error logging store check:', logError);
+        }
+
+        const checkedTime = formatRestockDate(checkedDate.toISOString());
+        const checkedTimeRelative = getRelativeTime(checkedDate.toISOString());
+
+        // Log the store check
+        try {
+            await interactionLogger.logStoreCheck(interaction.client, {
+                store: store,
+                region: region,
+                time: `${checkedTime} (${checkedTimeRelative})`
+            });
+        } catch (logError) {
+            console.error('❌ Error logging store check:', logError);
+        }
+
         const embed = new EmbedBuilder()
             .setColor(0x4CAF50)
             .setTitle('✅ Store Marked as Checked')
@@ -2838,6 +2878,20 @@ async function handleConfirmInProgress(interaction, region) {
                         embeds: [approvalEmbed],
                         components: [approvalRow]
                     });
+                    
+                    // Log the restock report
+                    try {
+                        await interactionLogger.logRestockReport(interaction.client, {
+                            store: store,
+                            region: region,
+                            date: formatRestockDate(now.toISOString()),
+                            time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                            type: 'In Progress',
+                            reporter: `${username} (${userId})`
+                        });
+                    } catch (logError) {
+                        console.error('❌ Error logging restock report:', logError);
+                    }
                 }
             }
         } catch (sendErr) {
