@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, InteractionResponseFlags } = require('discord.js');
 const config = require('../../config/config.json');
 
 module.exports = {
@@ -8,7 +8,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
 
         const channelId = config.channels.reactionRoles || '1381823226493272094';
         const messageId = config.channels.reactionRoleMessageId || '1434620131002159176';
@@ -105,42 +105,54 @@ module.exports = {
                 }
 
                 // Fetch ALL users who reacted
-                // Discord.js fetch() should get all users, but we'll verify
+                // Discord API limits to 100 users per fetch, so we need to paginate
                 let allUsers = new Map();
                 let reactedUserIds = new Set();
                 try {
-                    // Fetch all users - Discord.js handles pagination internally
-                    const fetchedUsers = await reaction.users.fetch();
+                    const expectedCount = reaction.count; // Total reactions (includes bots)
+                    const batchSize = 100;
+                    let lastUserId = null;
+                    let fetchedCount = 0;
                     
-                    // Add all users to our collection
-                    for (const [userId, user] of fetchedUsers) {
-                        allUsers.set(userId, user);
-                        if (!user.bot) {
-                            reactedUserIds.add(userId);
+                    // Fetch users in batches until we get all of them
+                    while (fetchedCount < expectedCount) {
+                        const fetchOptions = { limit: batchSize };
+                        if (lastUserId) {
+                            fetchOptions.after = lastUserId;
                         }
+                        
+                        const fetchedUsers = await reaction.users.fetch(fetchOptions);
+                        
+                        if (fetchedUsers.size === 0) break; // No more users
+                        
+                        // Add users to our collection
+                        for (const [userId, user] of fetchedUsers) {
+                            if (!allUsers.has(userId)) { // Avoid duplicates
+                                allUsers.set(userId, user);
+                                if (!user.bot) {
+                                    reactedUserIds.add(userId);
+                                }
+                                fetchedCount++;
+                                lastUserId = userId; // Track last user for pagination
+                            }
+                        }
+                        
+                        // If we got fewer than batchSize, we've reached the end
+                        if (fetchedUsers.size < batchSize) {
+                            break;
+                        }
+                        
+                        // Small delay to avoid rate limits
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
                     
-                    // Verify we got all users (reaction.count includes bots)
                     const botCount = Array.from(allUsers.values()).filter(u => u.bot).length;
                     const humanCount = allUsers.size - botCount;
-                    const expectedCount = reaction.count; // Total reactions (includes bots)
                     
                     console.log(`📊 Found ${humanCount} human users (${allUsers.size} total) who reacted with ${emojiName} (reaction count: ${expectedCount})`);
                     
-                    // If we're missing users, try to fetch again (might be a caching issue)
-                    if (allUsers.size < expectedCount - 2) { // Allow 2 buffer for edge cases
-                        console.warn(`⚠️ Possible mismatch: fetched ${allUsers.size} users but reaction count is ${expectedCount}. Re-fetching...`);
-                        // Clear cache and try again
-                        const refetchedUsers = await reaction.users.fetch({ force: true });
-                        allUsers.clear();
-                        reactedUserIds.clear();
-                        for (const [userId, user] of refetchedUsers) {
-                            allUsers.set(userId, user);
-                            if (!user.bot) {
-                                reactedUserIds.add(userId);
-                            }
-                        }
-                        console.log(`📊 After re-fetch: Found ${allUsers.size - Array.from(allUsers.values()).filter(u => u.bot).length} human users`);
+                    if (allUsers.size < expectedCount - 2) {
+                        console.warn(`⚠️ Still missing some users: fetched ${allUsers.size} but expected ${expectedCount}`);
                     }
                 } catch (error) {
                     console.error(`❌ Error fetching users for ${emojiName}:`, error);
@@ -191,13 +203,36 @@ module.exports = {
                 const reaction = message.reactions.cache.get(emojiName);
                 if (!reaction) continue;
                 
-                // Get all users who reacted (reuse from above if available, otherwise fetch)
+                // Get all users who reacted (paginate to get all)
                 let reactedUserIds = new Set();
                 try {
-                    const fetchedUsers = await reaction.users.fetch({ force: true });
-                    fetchedUsers.forEach((user, userId) => {
-                        if (!user.bot) reactedUserIds.add(userId);
-                    });
+                    const expectedCount = reaction.count;
+                    const batchSize = 100;
+                    let lastUserId = null;
+                    let fetchedCount = 0;
+                    
+                    // Fetch all users in batches
+                    while (fetchedCount < expectedCount) {
+                        const fetchOptions = { limit: batchSize };
+                        if (lastUserId) {
+                            fetchOptions.after = lastUserId;
+                        }
+                        
+                        const fetchedUsers = await reaction.users.fetch(fetchOptions);
+                        if (fetchedUsers.size === 0) break;
+                        
+                        fetchedUsers.forEach((user, userId) => {
+                            if (!user.bot && !reactedUserIds.has(userId)) {
+                                reactedUserIds.add(userId);
+                                fetchedCount++;
+                                lastUserId = userId;
+                            }
+                        });
+                        
+                        if (fetchedUsers.size < batchSize) break;
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
                     console.log(`📋 Found ${reactedUserIds.size} users who reacted with ${emojiName} (for cleanup check)`);
                 } catch (error) {
                     console.error(`❌ Error fetching reacted users for cleanup ${emojiName}:`, error);
