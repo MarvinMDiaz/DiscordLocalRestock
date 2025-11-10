@@ -22,7 +22,9 @@
     "reactionRoleMessageId": "1434620131002159176",
     "_reactionRoleMessageId_note": "Message ID for the reaction role message",
     "shadowRealm": "1437347355442679909",
-    "_shadowRealm_note": "Shadow Realm channel where banned users are sent and mod controls are located"
+    "_shadowRealm_note": "Shadow Realm channel where banned users are sent and mod controls are located",
+    "shadowRealmNotifications": "1435751467972558928",
+    "_shadowRealmNotifications_note": "Channel where Shadow Realm notifications are sent"
   },
   "commandChannels": {
     "_comment": "Restrict commands to specific channels (leave empty string \"\" to allow anywhere)",

@@ -291,7 +291,22 @@ async function handleShadowRealmSendSelect(interaction) {
             ephemeral: true
         });
 
-        // Send message to shadow realm channel
+        // Send notification to Shadow Realm notifications channel
+        const shadowRealmNotificationsChannelId = config.channels.shadowRealmNotifications || '1435751467972558928';
+        if (shadowRealmNotificationsChannelId) {
+            try {
+                const notificationsChannel = await guild.channels.fetch(shadowRealmNotificationsChannelId);
+                if (notificationsChannel) {
+                    await notificationsChannel.send({
+                        content: `🔮 **${selectedUser.username}** has been sent to the shadow realm.\n\nIf you want to return to society, create a ticket as to why.`
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Error sending notification to Shadow Realm notifications channel:', error);
+            }
+        }
+
+        // Send message to shadow realm channel (where the user is sent)
         const shadowRealmChannelId = config.channels.shadowRealm;
         if (shadowRealmChannelId) {
             try {
