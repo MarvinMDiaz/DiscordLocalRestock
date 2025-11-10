@@ -223,15 +223,28 @@ async function handleShadowRealmSendSelect(interaction) {
 
         // Check if user is already in shadow realm (has the role)
         const hasShadowRealmRole = targetMember.roles.cache.has(shadowRealmRoleId);
-        if (hasShadowRealmRole) {
-            return await interaction.reply({
-                content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
-                ephemeral: true
-            });
-        }
-
-        // Check if there's a stale snapshot (user was restored but snapshot wasn't cleared)
+        
+        // Also check snapshot to see if they're tracked as being in Shadow Realm
         const existingSnapshot = dataManager.getShadowRealmSnapshot(selectedUser.id);
+        
+        if (hasShadowRealmRole) {
+            // User has the role - they're in Shadow Realm
+            if (!existingSnapshot) {
+                // They have the role but no snapshot - this is an edge case
+                // Remove the role and allow sending them again
+                console.log(`⚠️ User ${selectedUser.username} has Shadow Realm role but no snapshot. Removing role and allowing re-send.`);
+                await targetMember.roles.remove(shadowRealmRoleId);
+                await targetMember.fetch(true);
+            } else {
+                // They have both role and snapshot - they're legitimately in Shadow Realm
+                return await interaction.reply({
+                    content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
+                    ephemeral: true
+                });
+            }
+        }
+        
+        // If there's a stale snapshot (user was restored but snapshot wasn't cleared)
         if (existingSnapshot && !hasShadowRealmRole) {
             // User was restored but snapshot still exists - clear it
             console.log(`🧹 Clearing stale snapshot for ${selectedUser.username}`);
@@ -316,10 +329,14 @@ async function handleShadowRealmRestoreSelect(interaction) {
         const targetMember = await guild.members.fetch(selectedUser.id);
         const shadowRealmRoleId = config.roles.shadowRealmRole;
 
-        // Check if user is in shadow realm
-        if (!targetMember.roles.cache.has(shadowRealmRoleId)) {
+        // Refresh member to get latest state
+        await targetMember.fetch(true);
+
+        // Check if user is in shadow realm (must have the role)
+        const hasShadowRealmRole = targetMember.roles.cache.has(shadowRealmRoleId);
+        if (!hasShadowRealmRole) {
             return await interaction.reply({
-                content: `⚠️ ${selectedUser.username} is not in Shadow Realm.`,
+                content: `⚠️ ${selectedUser.username} is not in Shadow Realm (does not have Shadow Realm role).`,
                 ephemeral: true
             });
         }
@@ -333,18 +350,26 @@ async function handleShadowRealmRestoreSelect(interaction) {
             });
         }
 
-        // Remove Shadow Realm role
+        // Remove Shadow Realm role first (before restoring other roles)
         await targetMember.roles.remove(shadowRealmRoleId);
         
         // Refresh member to ensure role was removed
         await targetMember.fetch(true);
         
-        // Verify role was removed
+        // Verify role was removed - if still present, try again
         if (targetMember.roles.cache.has(shadowRealmRoleId)) {
-            console.warn(`⚠️ Shadow Realm role still present after removal attempt for ${selectedUser.username}`);
-            // Try again
+            console.warn(`⚠️ Shadow Realm role still present after removal attempt for ${selectedUser.username}, retrying...`);
             await targetMember.roles.remove(shadowRealmRoleId);
             await targetMember.fetch(true);
+            
+            // Final check
+            if (targetMember.roles.cache.has(shadowRealmRoleId)) {
+                console.error(`❌ Failed to remove Shadow Realm role for ${selectedUser.username} after multiple attempts`);
+                return await interaction.reply({
+                    content: `❌ Error: Could not remove Shadow Realm role. Please check bot permissions and role hierarchy.`,
+                    ephemeral: true
+                });
+            }
         }
 
         // Restore all saved roles
@@ -364,6 +389,9 @@ async function handleShadowRealmRestoreSelect(interaction) {
             await targetMember.roles.add(trainerRole);
             console.log(`✅ Added trainer role to ${selectedUser.username} after Shadow Realm restoration`);
         }
+        
+        // Final refresh to ensure all roles are applied
+        await targetMember.fetch(true);
 
         // Remove snapshot
         await dataManager.removeShadowRealmSnapshot(
