@@ -20,7 +20,9 @@
     "reactionRoles": "1381823226493272094",
     "_reactionRoles_note": "Channel where reaction role message is posted",
     "reactionRoleMessageId": "1434620131002159176",
-    "_reactionRoleMessageId_note": "Message ID for the reaction role message"
+    "_reactionRoleMessageId_note": "Message ID for the reaction role message",
+    "shadowRealm": "1435751467972558928",
+    "_shadowRealm_note": "Shadow Realm channel where banned users are sent"
   },
   "commandChannels": {
     "_comment": "Restrict commands to specific channels (leave empty string \"\" to allow anywhere)",
@@ -65,7 +67,9 @@
     "weeklyReportVA": "1434311999939940506",
     "_weeklyReportVA_note": "Role mentioned when VA weekly recap reports are posted",
     "weeklyReportMD": "1434312077052350464",
-    "_weeklyReportMD_note": "Role mentioned when MD weekly recap reports are posted"
+    "_weeklyReportMD_note": "Role mentioned when MD weekly recap reports are posted",
+    "shadowRealmRole": "1435751737742065734",
+    "_shadowRealmRole_note": "Shadow Realm role - users with this role can only see shadow realm channel"
   },
   "stores": {
     "_comment": "Store lists organized by store type and region",

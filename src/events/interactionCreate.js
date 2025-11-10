@@ -398,6 +398,23 @@ module.exports = {
             return;
         }
 
+        // Handle user select menu interactions (for Shadow Realm)
+        if (interaction.isUserSelectMenu()) {
+            const { customId } = interaction;
+            
+            if (customId === 'shadow_realm_send_user') {
+                const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                await shadowRealmHandlers.handleShadowRealmSendSelect(interaction);
+                return;
+            }
+
+            if (customId === 'shadow_realm_restore_user') {
+                const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                await shadowRealmHandlers.handleShadowRealmRestoreSelect(interaction);
+                return;
+            }
+        }
+
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
             // Log the select menu interaction

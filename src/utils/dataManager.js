@@ -420,6 +420,71 @@ class DataManager {
             console.error('❌ Error creating backup:', error);
         }
     }
+
+    // Shadow Realm functions
+    getShadowRealmSnapshots() {
+        if (!this.data.shadow_realm_snapshots) {
+            this.data.shadow_realm_snapshots = [];
+        }
+        return this.data.shadow_realm_snapshots;
+    }
+
+    // Save role snapshot before sending to shadow realm
+    async saveShadowRealmSnapshot(userId, username, roles, sentBy, sentByUsername) {
+        if (!this.data.shadow_realm_snapshots) {
+            this.data.shadow_realm_snapshots = [];
+        }
+
+        const snapshot = {
+            user_id: userId,
+            username: username,
+            roles: roles, // Array of role IDs
+            sent_at: new Date().toISOString(),
+            sent_by: sentBy,
+            sent_by_username: sentByUsername
+        };
+
+        // Remove existing snapshot if any
+        const existingIndex = this.data.shadow_realm_snapshots.findIndex(s => s.user_id === userId);
+        if (existingIndex >= 0) {
+            this.data.shadow_realm_snapshots[existingIndex] = snapshot;
+        } else {
+            this.data.shadow_realm_snapshots.push(snapshot);
+        }
+
+        await this.saveData();
+        return snapshot;
+    }
+
+    // Get role snapshot for a user
+    getShadowRealmSnapshot(userId) {
+        const snapshots = this.getShadowRealmSnapshots();
+        return snapshots.find(s => s.user_id === userId);
+    }
+
+    // Remove shadow realm snapshot after restoring
+    async removeShadowRealmSnapshot(userId, restoredBy, restoredByUsername) {
+        if (!this.data.shadow_realm_snapshots) {
+            return null;
+        }
+
+        const snapshot = this.getShadowRealmSnapshot(userId);
+        if (snapshot) {
+            snapshot.restored_at = new Date().toISOString();
+            snapshot.restored_by = restoredBy;
+            snapshot.restored_by_username = restoredByUsername;
+            
+            // Remove from active list (keep for history)
+            const index = this.data.shadow_realm_snapshots.findIndex(s => s.user_id === userId);
+            if (index >= 0) {
+                this.data.shadow_realm_snapshots.splice(index, 1);
+            }
+            
+            await this.saveData();
+            return snapshot;
+        }
+        return null;
+    }
 }
 
 // Create singleton instance
