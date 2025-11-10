@@ -36,9 +36,24 @@ async function handleApprovalButton(interaction) {
     try {
         const { customId } = interaction;
         const isApproved = customId.startsWith('approve_');
-        const restockId = customId.replace('approve_', '').replace('reject_', '');
+        
+        // Extract restockId more robustly
+        let restockId;
+        if (customId.startsWith('reject_')) {
+            restockId = customId.replace('reject_', '');
+        } else if (customId.startsWith('approve_')) {
+            restockId = customId.replace('approve_', '');
+        } else {
+            console.error('❌ Unknown customId format:', customId);
+            return await interaction.reply({
+                content: '❌ Invalid button action.',
+                ephemeral: true
+            });
+        }
 
         console.log('🔍 Looking for restock with ID:', restockId);
+        console.log('🔍 CustomId:', customId);
+        console.log('🔍 Is approved:', isApproved);
 
         // Get the restock report
         let restocks = dataManager.getRestocks();
@@ -113,15 +128,46 @@ async function handleApprovalButton(interaction) {
 
         // Update the message (with timeout handling)
         try {
-            await interaction.update({
-                embeds: [embed],
-                components: [disabledRow]
-            });
-        } catch (error) {
-            if (error.code === 10062) {
-                console.log('⏱️ Button interaction timed out, continuing anyway...');
+            // Check if interaction was already replied/deferred
+            if (interaction.replied || interaction.deferred) {
+                console.log('⚠️ Interaction already replied/deferred, using editReply instead');
+                await interaction.editReply({
+                    embeds: [embed],
+                    components: [disabledRow]
+                });
             } else {
-                throw error;
+                await interaction.update({
+                    embeds: [embed],
+                    components: [disabledRow]
+                });
+            }
+        } catch (error) {
+            if (error.code === 10062 || error.code === 40060) {
+                console.log('⏱️ Button interaction timed out, continuing anyway...');
+                // Try to edit the message directly if update fails
+                try {
+                    if (interaction.message && interaction.message.editable) {
+                        await interaction.message.edit({
+                            embeds: [embed],
+                            components: [disabledRow]
+                        });
+                    }
+                } catch (editError) {
+                    console.error('❌ Could not edit message after timeout:', editError);
+                }
+            } else {
+                console.error('❌ Error updating interaction:', error);
+                // Try to reply if update fails
+                if (!interaction.replied && !interaction.deferred) {
+                    try {
+                        await interaction.reply({
+                            content: `✅ Restock ${isApproved ? 'approved' : 'rejected'} successfully!`,
+                            ephemeral: true
+                        });
+                    } catch (replyError) {
+                        console.error('❌ Could not reply either:', replyError);
+                    }
+                }
             }
         }
 
