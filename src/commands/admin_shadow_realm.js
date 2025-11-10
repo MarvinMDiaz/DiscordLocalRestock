@@ -540,3 +540,39 @@ module.exports.handleSendToShadowRealm = handleSendToShadowRealm;
 module.exports.handleRestoreFromShadowRealm = handleRestoreFromShadowRealm;
 module.exports.handleShadowRealmStatus = handleShadowRealmStatus;
 
+// Handle modal submission for Shadow Realm reason
+async function handleShadowRealmSendModal(interaction) {
+    try {
+        const reason = interaction.fields.getTextInputValue('reason') || null;
+        
+        await interaction.deferReply({ ephemeral: true });
+
+        // Encode reason in customId if provided
+        const customId = reason 
+            ? `shadow_realm_send_user_${Buffer.from(reason.substring(0, 80)).toString('base64')}` 
+            : 'shadow_realm_send_user';
+
+        const userSelect = new UserSelectMenuBuilder()
+            .setCustomId(customId)
+            .setPlaceholder('Select user to send to Shadow Realm...')
+            .setMaxValues(1);
+
+        const row = new ActionRowBuilder().addComponents(userSelect);
+
+        await interaction.editReply({
+            content: '**🔮 Send to Shadow Realm**\n\nSelect the user you want to send to Shadow Realm. They will lose all roles and only be able to see the Shadow Realm channel.' + (reason ? `\n\n**Reason:** ${reason}` : ''),
+            components: [row]
+        });
+    } catch (error) {
+        console.error('❌ Error handling Shadow Realm send modal:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: `❌ Error: ${error.message}`,
+                ephemeral: true
+            });
+        }
+    }
+}
+
+module.exports.handleShadowRealmSendModal = handleShadowRealmSendModal;
+
