@@ -330,6 +330,14 @@ async function handleShadowRealmRestoreSelect(interaction) {
             await targetMember.roles.add(rolesToRestore);
         }
 
+        // Add trainer role (required role for restored users)
+        const trainerRoleId = '1346598292192231485';
+        const trainerRole = await guild.roles.fetch(trainerRoleId).catch(() => null);
+        if (trainerRole && !targetMember.roles.cache.has(trainerRoleId)) {
+            await targetMember.roles.add(trainerRole);
+            console.log(`✅ Added trainer role to ${selectedUser.username} after Shadow Realm restoration`);
+        }
+
         // Remove snapshot
         await dataManager.removeShadowRealmSnapshot(
             selectedUser.id,
@@ -349,7 +357,7 @@ async function handleShadowRealmRestoreSelect(interaction) {
         }
 
         await interaction.reply({
-            content: `✅ **${selectedUser.username}** has been restored from Shadow Realm.\n\n**Roles restored:** ${rolesToRestore.length}`,
+            content: `✅ **${selectedUser.username}** has been restored from Shadow Realm.\n\n**Roles restored:** ${rolesToRestore.length}\n**Trainer role added.**`,
             ephemeral: true
         });
     } catch (error) {
