@@ -104,22 +104,54 @@ module.exports = {
                     continue;
                 }
 
-                // Fetch all users who reacted
-                let users;
+                // Fetch ALL users who reacted
+                // Note: Discord.js fetch() should get all users, but we verify the count
+                let allUsers = new Map();
                 try {
-                    users = await reaction.users.fetch();
+                    // Fetch all users - this should get all users who reacted
+                    const fetchedUsers = await reaction.users.fetch();
+                    
+                    // Add all users to our collection
+                    for (const [userId, user] of fetchedUsers) {
+                        allUsers.set(userId, user);
+                    }
+                    
+                    // Verify we got all users (reaction.count includes bots, so it might be slightly higher)
+                    const botCount = Array.from(allUsers.values()).filter(u => u.bot).length;
+                    const humanCount = allUsers.size - botCount;
+                    const expectedCount = reaction.count; // Total reactions (includes bots)
+                    
+                    console.log(`📊 Found ${humanCount} human users (${allUsers.size} total) who reacted with ${emojiName} (reaction count: ${expectedCount})`);
+                    
+                    // If we're missing a significant number, log a warning
+                    if (allUsers.size < expectedCount - 5) { // Allow 5 buffer for edge cases
+                        console.warn(`⚠️ Possible mismatch: fetched ${allUsers.size} users but reaction count is ${expectedCount}`);
+                    }
                 } catch (error) {
                     console.error(`❌ Error fetching users for ${emojiName}:`, error);
+                    results.errors.push(`Failed to fetch users for ${emojiName}: ${error.message}`);
                     continue;
                 }
 
                 // Process each user
-                for (const [userId, user] of users) {
+                for (const [userId, user] of allUsers) {
                     // Skip bots
                     if (user.bot) continue;
 
                     try {
-                        const member = await guild.members.fetch(userId);
+                        const member = await guild.members.fetch(userId).catch(err => {
+                            if (err.code === 10007) {
+                                // User left the server - skip
+                                return null;
+                            }
+                            throw err;
+                        });
+                        
+                        if (!member) {
+                            // User left server, skip
+                            continue;
+                        }
+                        
                         const hasRole = member.roles.cache.has(roleInfo.role.id);
 
                         if (!hasRole) {
@@ -137,10 +169,47 @@ module.exports = {
                     }
                 }
             }
-
-            // Also check for users who have roles but didn't react (cleanup)
-            // This is optional - you might want to keep roles even if they unreacted
-            // For now, we'll skip this to avoid removing roles unintentionally
+            
+            // Also check for users who have roles but didn't react (cleanup orphaned roles)
+            // Get all members with each role and check if they reacted
+            for (const [emojiName, roleInfo] of Object.entries(emojiToRole)) {
+                const reaction = message.reactions.cache.get(emojiName);
+                if (!reaction) continue;
+                
+                // Get all users who reacted
+                let reactedUserIds = new Set();
+                try {
+                    const fetchedUsers = await reaction.users.fetch();
+                    fetchedUsers.forEach((user, userId) => {
+                        if (!user.bot) reactedUserIds.add(userId);
+                    });
+                } catch (error) {
+                    console.error(`❌ Error fetching reacted users for cleanup ${emojiName}:`, error);
+                    continue;
+                }
+                
+                // Get all members with this role
+                try {
+                    const membersWithRole = roleInfo.role.members;
+                    for (const [memberId, member] of membersWithRole) {
+                        // If member has role but didn't react, remove the role
+                        if (!reactedUserIds.has(memberId)) {
+                            try {
+                                await member.roles.remove(roleInfo.role);
+                                results.removed.push(`${member.user.username} (${memberId}) - ${roleInfo.name}`);
+                                synced++;
+                                console.log(`✅ Removed ${roleInfo.name} role from ${member.user.username} (no reaction)`);
+                            } catch (error) {
+                                errors++;
+                                results.errors.push(`${member.user.username} - ${roleInfo.name} removal: ${error.message}`);
+                                console.error(`❌ Error removing ${roleInfo.name} role from ${member.user.username}:`, error);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ Error fetching members with ${roleInfo.name} role:`, error);
+                }
+            }
 
             // Build response
             let response = `✅ **Reaction Role Sync Complete**\n\n`;
@@ -154,6 +223,17 @@ module.exports = {
                 });
                 if (results.added.length > 20) {
                     response += `... and ${results.added.length - 20} more\n`;
+                }
+                response += `\n`;
+            }
+
+            if (results.removed.length > 0) {
+                response += `**🗑️ Removed Orphaned Roles (${results.removed.length}):**\n`;
+                results.removed.slice(0, 20).forEach(item => {
+                    response += `• ${item}\n`;
+                });
+                if (results.removed.length > 20) {
+                    response += `... and ${results.removed.length - 20} more\n`;
                 }
                 response += `\n`;
             }

@@ -61,7 +61,14 @@ module.exports = {
                 throw error;
             }
 
-            const emoji = reaction.emoji.name;
+            // Get emoji name - handle both unicode and custom emojis
+            const emoji = reaction.emoji.name || reaction.emoji.identifier;
+            
+            // Double-check we're on the right message
+            if (reaction.message.id !== targetMessageId) {
+                console.log(`⚠️ Reaction remove on wrong message: ${reaction.message.id} (expected ${targetMessageId})`);
+                return;
+            }
 
             // Get role IDs from config
             const vaRoleId = config.roles.localRestockVA;
@@ -82,15 +89,40 @@ module.exports = {
                     return false;
                 }
 
+                // Refresh member to get latest role state
+                try {
+                    member = await guild.members.fetch(user.id);
+                } catch (error) {
+                    console.error(`❌ Error refreshing member ${user.username}:`, error.message);
+                    return false;
+                }
+
                 // Check if user has the role
                 if (!member.roles.cache.has(roleId)) {
                     console.log(`ℹ️ User ${user.username} doesn't have ${roleName} role`);
                     return true;
                 }
 
+                // Verify the user actually removed the reaction (double-check)
+                // Fetch the message reaction to verify
+                try {
+                    const messageReaction = reaction.message.reactions.cache.get(emoji);
+                    if (messageReaction) {
+                        const userReacted = await messageReaction.users.fetch(user.id).catch(() => null);
+                        if (userReacted) {
+                            // User still has the reaction, don't remove role
+                            console.log(`⚠️ User ${user.username} still has ${emoji} reaction, not removing ${roleName} role`);
+                            return false;
+                        }
+                    }
+                } catch (error) {
+                    // If we can't verify, proceed with removal (reaction was removed event fired)
+                    console.log(`⚠️ Could not verify reaction state for ${user.username}, proceeding with role removal`);
+                }
+
                 try {
                     await member.roles.remove(role);
-                    console.log(`✅ Removed ${roleName} role from ${user.username}`);
+                    console.log(`✅ Removed ${roleName} role from ${user.username} (${user.id})`);
                     return true;
                 } catch (error) {
                     console.error(`❌ Error removing ${roleName} role from ${user.username}:`, error.message);
