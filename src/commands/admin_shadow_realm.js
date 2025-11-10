@@ -335,6 +335,17 @@ async function handleShadowRealmRestoreSelect(interaction) {
 
         // Remove Shadow Realm role
         await targetMember.roles.remove(shadowRealmRoleId);
+        
+        // Refresh member to ensure role was removed
+        await targetMember.fetch(true);
+        
+        // Verify role was removed
+        if (targetMember.roles.cache.has(shadowRealmRoleId)) {
+            console.warn(`⚠️ Shadow Realm role still present after removal attempt for ${selectedUser.username}`);
+            // Try again
+            await targetMember.roles.remove(shadowRealmRoleId);
+            await targetMember.fetch(true);
+        }
 
         // Restore all saved roles
         const rolesToRestore = snapshot.roles.filter(roleId => {
