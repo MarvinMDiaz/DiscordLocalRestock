@@ -103,22 +103,8 @@ module.exports = {
                     return true;
                 }
 
-                // Verify the user actually removed the reaction (double-check)
-                // Fetch the message reaction to verify
-                try {
-                    const messageReaction = reaction.message.reactions.cache.get(emoji);
-                    if (messageReaction) {
-                        const userReacted = await messageReaction.users.fetch(user.id).catch(() => null);
-                        if (userReacted) {
-                            // User still has the reaction, don't remove role
-                            console.log(`⚠️ User ${user.username} still has ${emoji} reaction, not removing ${roleName} role`);
-                            return false;
-                        }
-                    }
-                } catch (error) {
-                    // If we can't verify, proceed with removal (reaction was removed event fired)
-                    console.log(`⚠️ Could not verify reaction state for ${user.username}, proceeding with role removal`);
-                }
+                // Note: By the time this event fires, Discord has already removed the reaction
+                // So we can trust the event and proceed with role removal
 
                 try {
                     await member.roles.remove(role);

@@ -105,27 +105,42 @@ module.exports = {
                 }
 
                 // Fetch ALL users who reacted
-                // Note: Discord.js fetch() should get all users, but we verify the count
+                // Discord.js fetch() should get all users, but we'll verify
                 let allUsers = new Map();
+                let reactedUserIds = new Set();
                 try {
-                    // Fetch all users - this should get all users who reacted
+                    // Fetch all users - Discord.js handles pagination internally
                     const fetchedUsers = await reaction.users.fetch();
                     
                     // Add all users to our collection
                     for (const [userId, user] of fetchedUsers) {
                         allUsers.set(userId, user);
+                        if (!user.bot) {
+                            reactedUserIds.add(userId);
+                        }
                     }
                     
-                    // Verify we got all users (reaction.count includes bots, so it might be slightly higher)
+                    // Verify we got all users (reaction.count includes bots)
                     const botCount = Array.from(allUsers.values()).filter(u => u.bot).length;
                     const humanCount = allUsers.size - botCount;
                     const expectedCount = reaction.count; // Total reactions (includes bots)
                     
                     console.log(`📊 Found ${humanCount} human users (${allUsers.size} total) who reacted with ${emojiName} (reaction count: ${expectedCount})`);
                     
-                    // If we're missing a significant number, log a warning
-                    if (allUsers.size < expectedCount - 5) { // Allow 5 buffer for edge cases
-                        console.warn(`⚠️ Possible mismatch: fetched ${allUsers.size} users but reaction count is ${expectedCount}`);
+                    // If we're missing users, try to fetch again (might be a caching issue)
+                    if (allUsers.size < expectedCount - 2) { // Allow 2 buffer for edge cases
+                        console.warn(`⚠️ Possible mismatch: fetched ${allUsers.size} users but reaction count is ${expectedCount}. Re-fetching...`);
+                        // Clear cache and try again
+                        const refetchedUsers = await reaction.users.fetch({ force: true });
+                        allUsers.clear();
+                        reactedUserIds.clear();
+                        for (const [userId, user] of refetchedUsers) {
+                            allUsers.set(userId, user);
+                            if (!user.bot) {
+                                reactedUserIds.add(userId);
+                            }
+                        }
+                        console.log(`📊 After re-fetch: Found ${allUsers.size - Array.from(allUsers.values()).filter(u => u.bot).length} human users`);
                     }
                 } catch (error) {
                     console.error(`❌ Error fetching users for ${emojiName}:`, error);
@@ -176,21 +191,25 @@ module.exports = {
                 const reaction = message.reactions.cache.get(emojiName);
                 if (!reaction) continue;
                 
-                // Get all users who reacted
+                // Get all users who reacted (reuse from above if available, otherwise fetch)
                 let reactedUserIds = new Set();
                 try {
-                    const fetchedUsers = await reaction.users.fetch();
+                    const fetchedUsers = await reaction.users.fetch({ force: true });
                     fetchedUsers.forEach((user, userId) => {
                         if (!user.bot) reactedUserIds.add(userId);
                     });
+                    console.log(`📋 Found ${reactedUserIds.size} users who reacted with ${emojiName} (for cleanup check)`);
                 } catch (error) {
                     console.error(`❌ Error fetching reacted users for cleanup ${emojiName}:`, error);
                     continue;
                 }
                 
                 // Get all members with this role
+                // Use role.members which is already cached and efficient
                 try {
                     const membersWithRole = roleInfo.role.members;
+                    console.log(`📋 Found ${membersWithRole.size} members with ${roleInfo.name} role`);
+                    
                     for (const [memberId, member] of membersWithRole) {
                         // If member has role but didn't react, remove the role
                         if (!reactedUserIds.has(memberId)) {
@@ -207,7 +226,8 @@ module.exports = {
                         }
                     }
                 } catch (error) {
-                    console.error(`❌ Error fetching members with ${roleInfo.name} role:`, error);
+                    console.error(`❌ Error processing members with ${roleInfo.name} role:`, error);
+                    results.errors.push(`Error processing ${roleInfo.name} role members: ${error.message}`);
                 }
             }
 
