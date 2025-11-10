@@ -27,9 +27,12 @@ module.exports = {
             }
         }
 
-        // Only handle reactions in the specific channel
-        const targetChannelId = '1381823226493272094';
+        // Only handle reactions on the specific reaction role message
+        const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
+        const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
+        
         if (reaction.message.channelId !== targetChannelId) return;
+        if (reaction.message.id !== targetMessageId) return;
 
         const guild = reaction.message.guild;
         if (!guild) {
@@ -38,9 +41,6 @@ module.exports = {
         }
 
         try {
-            const member = await guild.members.fetch(user.id);
-            const emoji = reaction.emoji.name;
-
             // Check if bot has permission to manage roles
             const botMember = await guild.members.fetch(reaction.client.user.id);
             if (!botMember.permissions.has('ManageRoles')) {
@@ -48,63 +48,65 @@ module.exports = {
                 return;
             }
 
+            // Try to fetch the member - they might have left the server
+            let member;
+            try {
+                member = await guild.members.fetch(user.id);
+            } catch (error) {
+                if (error.code === 10007) {
+                    // Unknown member - they left the server
+                    console.log(`⚠️ User ${user.username} (${user.id}) is not in the server, skipping role removal`);
+                    return;
+                }
+                throw error;
+            }
+
+            const emoji = reaction.emoji.name;
+
             // Get role IDs from config
             const vaRoleId = config.roles.localRestockVA;
             const mdRoleId = config.roles.localRestockMD;
             const weeklyVaRoleId = config.roles.weeklyReportVA;
             const weeklyMdRoleId = config.roles.weeklyReportMD;
 
-            console.log(`🔔 Reaction removed: ${emoji} from ${user.username} in channel ${reaction.message.channelId}`);
+            console.log(`🔔 Reaction removed: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
+
+            // Helper function to remove role with proper checks
+            const removeRole = async (roleId, roleName) => {
+                let role = guild.roles.cache.get(roleId);
+                if (!role) {
+                    role = await guild.roles.fetch(roleId).catch(() => null);
+                }
+                if (!role) {
+                    console.error(`❌ ${roleName} role not found: ${roleId}`);
+                    return false;
+                }
+
+                // Check if user has the role
+                if (!member.roles.cache.has(roleId)) {
+                    console.log(`ℹ️ User ${user.username} doesn't have ${roleName} role`);
+                    return true;
+                }
+
+                try {
+                    await member.roles.remove(role);
+                    console.log(`✅ Removed ${roleName} role from ${user.username}`);
+                    return true;
+                } catch (error) {
+                    console.error(`❌ Error removing ${roleName} role from ${user.username}:`, error.message);
+                    return false;
+                }
+            };
 
             // Handle different reactions
             if (emoji === '🚨') {
-                // VA Alerts
-                let vaRole = guild.roles.cache.get(vaRoleId);
-                if (!vaRole) {
-                    vaRole = await guild.roles.fetch(vaRoleId);
-                }
-                if (vaRole) {
-                    await member.roles.remove(vaRole);
-                    console.log(`✅ Removed VA role from ${user.username}`);
-                } else {
-                    console.error(`❌ VA role not found: ${vaRoleId}`);
-                }
+                await removeRole(vaRoleId, 'VA Alerts');
             } else if (emoji === '📋') {
-                // MD Alerts
-                let mdRole = guild.roles.cache.get(mdRoleId);
-                if (!mdRole) {
-                    mdRole = await guild.roles.fetch(mdRoleId);
-                }
-                if (mdRole) {
-                    await member.roles.remove(mdRole);
-                    console.log(`✅ Removed MD role from ${user.username}`);
-                } else {
-                    console.error(`❌ MD role not found: ${mdRoleId}`);
-                }
+                await removeRole(mdRoleId, 'MD Alerts');
             } else if (emoji === '📅') {
-                // Weekly VA
-                let weeklyVaRole = guild.roles.cache.get(weeklyVaRoleId);
-                if (!weeklyVaRole) {
-                    weeklyVaRole = await guild.roles.fetch(weeklyVaRoleId);
-                }
-                if (weeklyVaRole) {
-                    await member.roles.remove(weeklyVaRole);
-                    console.log(`✅ Removed Weekly VA role from ${user.username}`);
-                } else {
-                    console.error(`❌ Weekly VA role not found: ${weeklyVaRoleId}`);
-                }
+                await removeRole(weeklyVaRoleId, 'Weekly VA Recap');
             } else if (emoji === '📊') {
-                // Weekly MD
-                let weeklyMdRole = guild.roles.cache.get(weeklyMdRoleId);
-                if (!weeklyMdRole) {
-                    weeklyMdRole = await guild.roles.fetch(weeklyMdRoleId);
-                }
-                if (weeklyMdRole) {
-                    await member.roles.remove(weeklyMdRole);
-                    console.log(`✅ Removed Weekly MD role from ${user.username}`);
-                } else {
-                    console.error(`❌ Weekly MD role not found: ${weeklyMdRoleId}`);
-                }
+                await removeRole(weeklyMdRoleId, 'Weekly MD Recap');
             }
         } catch (error) {
             console.error('❌ Error handling reaction remove:', error);
@@ -112,6 +114,7 @@ module.exports = {
                 userId: user.id,
                 username: user.username,
                 emoji: reaction.emoji.name,
+                messageId: reaction.message.id,
                 channelId: reaction.message.channelId
             });
         }

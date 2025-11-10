@@ -16,7 +16,11 @@
     "weeklyReportMD": "1434306954330767380",
     "_weeklyReportMD_note": "Channel where weekly MD recap reports are posted (Sunday reports)",
     "restock_in_progress_va": "1434307040599085178",
-    "restock_in_progress_md": "1434307070429106296"
+    "restock_in_progress_md": "1434307070429106296",
+    "reactionRoles": "1381823226493272094",
+    "_reactionRoles_note": "Channel where reaction role message is posted",
+    "reactionRoleMessageId": "1434620131002159176",
+    "_reactionRoleMessageId_note": "Message ID for the reaction role message"
   },
   "commandChannels": {
     "_comment": "Restrict commands to specific channels (leave empty string \"\" to allow anywhere)",

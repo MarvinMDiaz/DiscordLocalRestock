@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const config = require('../../config/config.json');
+const configManager = require('../utils/configManager');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,7 +11,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
-        const channelId = '1381823226493272094';
+        const channelId = config.channels.reactionRoles || '1381823226493272094';
         const channel = interaction.client.channels.cache.get(channelId);
 
         if (!channel) {
@@ -63,11 +64,19 @@ module.exports = {
             await message.react('📅'); // Weekly VA
             await message.react('📊'); // Weekly MD
 
+            // Save message ID to config
+            const currentConfig = await configManager.readConfig();
+            if (!currentConfig.channels) {
+                currentConfig.channels = {};
+            }
+            currentConfig.channels.reactionRoleMessageId = message.id;
+            await configManager.writeConfig(currentConfig);
+
             await interaction.editReply({
-                content: `✅ Reaction role message created in ${channel}!\n\n**Message ID:** ${message.id}\n**Reactions:** 🚨 (VA), 📋 (MD), 📅 (Weekly VA), 📊 (Weekly MD)`
+                content: `✅ Reaction role message created in ${channel}!\n\n**Message ID:** ${message.id}\n**Reactions:** 🚨 (VA), 📋 (MD), 📅 (Weekly VA), 📊 (Weekly MD)\n\n⚠️ **Note:** Message ID has been saved to config. The bot will now only process reactions on this specific message.`
             });
 
-            console.log(`✅ Admin ${interaction.user.username} set up reaction roles in channel ${channelId}`);
+            console.log(`✅ Admin ${interaction.user.username} set up reaction roles in channel ${channelId}. Message ID: ${message.id}`);
         } catch (error) {
             console.error('❌ Error setting up reaction roles:', error);
             await interaction.editReply({
