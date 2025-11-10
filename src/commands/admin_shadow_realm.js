@@ -86,25 +86,7 @@ async function handleSendToShadowRealm(interaction) {
                 ephemeral: true
             });
         }
-        
-        // Show modal to get reason when using button
-        const modal = new ModalBuilder()
-            .setCustomId('shadow_realm_send_modal')
-            .setTitle('Send to Shadow Realm');
-
-        const reasonInput = new TextInputBuilder()
-            .setCustomId('reason')
-            .setLabel('Reason (Optional)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Enter reason for sending to Shadow Realm...')
-            .setRequired(false)
-            .setMaxLength(500);
-
-        const reasonRow = new ActionRowBuilder().addComponents(reasonInput);
-        modal.addComponents(reasonRow);
-
-        await interaction.showModal(modal);
-        return;
+        await interaction.deferReply({ ephemeral: true });
     } else {
         // Slash command - defer reply
         await interaction.deferReply({ ephemeral: true });
@@ -231,18 +213,55 @@ async function handleShadowRealmSendSelect(interaction) {
             });
         }
 
-        // Extract reason from customId if present
+        // Check if reason is already encoded in customId (from slash command)
         let reason = null;
         const customId = interaction.customId;
         if (customId.startsWith('shadow_realm_send_user_')) {
             try {
                 const encodedReason = customId.replace('shadow_realm_send_user_', '');
-                reason = Buffer.from(encodedReason, 'base64').toString('utf-8');
+                if (encodedReason) {
+                    reason = Buffer.from(encodedReason, 'base64').toString('utf-8');
+                }
             } catch (error) {
                 console.error('❌ Error decoding reason from customId:', error);
             }
         }
 
+        // If reason is already provided (from slash command), proceed directly
+        if (reason !== null) {
+            await processShadowRealmSend(interaction, selectedUser, reason);
+            return;
+        }
+
+        // If no reason provided (button flow), show modal to get reason
+        const modal = new ModalBuilder()
+            .setCustomId(`shadow_realm_reason_modal_${selectedUser.id}`)
+            .setTitle('Send to Shadow Realm - Reason');
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('Reason (Optional)')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Enter reason for sending to Shadow Realm...')
+            .setRequired(false)
+            .setMaxLength(500);
+
+        const reasonRow = new ActionRowBuilder().addComponents(reasonInput);
+        modal.addComponents(reasonRow);
+
+        await interaction.showModal(modal);
+    } catch (error) {
+        console.error('❌ Error handling shadow realm send select:', error);
+        await interaction.reply({
+            content: `❌ Error: ${error.message}`,
+            ephemeral: true
+        });
+    }
+}
+
+// Process the actual Shadow Realm send
+async function processShadowRealmSend(interaction, selectedUser, reason = null) {
+    try {
         const guild = interaction.guild;
         const targetMember = await guild.members.fetch(selectedUser.id);
         const shadowRealmRoleId = config.roles.shadowRealmRole;
@@ -352,7 +371,7 @@ async function handleShadowRealmSendSelect(interaction) {
             }
         }
     } catch (error) {
-        console.error('❌ Error handling shadow realm send select:', error);
+        console.error('❌ Error processing shadow realm send:', error);
         await interaction.reply({
             content: `❌ Error: ${error.message}`,
             ephemeral: true
@@ -543,26 +562,34 @@ module.exports.handleShadowRealmStatus = handleShadowRealmStatus;
 // Handle modal submission for Shadow Realm reason
 async function handleShadowRealmSendModal(interaction) {
     try {
+        const customId = interaction.customId;
+        // Extract user ID from customId: shadow_realm_reason_modal_<userId>
+        const userId = customId.replace('shadow_realm_reason_modal_', '');
+        
+        if (!userId) {
+            return await interaction.reply({
+                content: '❌ Error: Could not identify user.',
+                ephemeral: true
+            });
+        }
+
         const reason = interaction.fields.getTextInputValue('reason') || null;
         
+        // Fetch the user
+        const guild = interaction.guild;
+        const selectedUser = await guild.client.users.fetch(userId);
+        
+        if (!selectedUser) {
+            return await interaction.reply({
+                content: '❌ User not found.',
+                ephemeral: true
+            });
+        }
+
         await interaction.deferReply({ ephemeral: true });
-
-        // Encode reason in customId if provided
-        const customId = reason 
-            ? `shadow_realm_send_user_${Buffer.from(reason.substring(0, 80)).toString('base64')}` 
-            : 'shadow_realm_send_user';
-
-        const userSelect = new UserSelectMenuBuilder()
-            .setCustomId(customId)
-            .setPlaceholder('Select user to send to Shadow Realm...')
-            .setMaxValues(1);
-
-        const row = new ActionRowBuilder().addComponents(userSelect);
-
-        await interaction.editReply({
-            content: '**🔮 Send to Shadow Realm**\n\nSelect the user you want to send to Shadow Realm. They will lose all roles and only be able to see the Shadow Realm channel.' + (reason ? `\n\n**Reason:** ${reason}` : ''),
-            components: [row]
-        });
+        
+        // Process the Shadow Realm send with the reason
+        await processShadowRealmSend(interaction, selectedUser, reason);
     } catch (error) {
         console.error('❌ Error handling Shadow Realm send modal:', error);
         if (!interaction.replied && !interaction.deferred) {

@@ -843,6 +843,13 @@ module.exports = {
                 return;
             }
 
+            // Handle Shadow Realm reason modal (after user selection)
+            if (customId.startsWith('shadow_realm_reason_modal_')) {
+                const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                await shadowRealmHandlers.handleShadowRealmSendModal(interaction);
+                return;
+            }
+
             // Handle past restock date modal submissions
             if (customId.startsWith('past_restock_date_va_')) {
                 const { handlePastRestockDateSubmit } = require('../utils/buttonRestockHandler');
