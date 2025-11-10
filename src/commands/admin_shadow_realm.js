@@ -267,18 +267,30 @@ async function processShadowRealmSend(interaction, selectedUser, reason = null) 
         const shadowRealmRoleId = config.roles.shadowRealmRole;
 
         if (!shadowRealmRoleId) {
-            return await interaction.reply({
-                content: '❌ Shadow Realm role not configured. Please set it in config.',
-                ephemeral: true
-            });
+            if (interaction.deferred) {
+                return await interaction.editReply({
+                    content: '❌ Shadow Realm role not configured. Please set it in config.'
+                });
+            } else {
+                return await interaction.reply({
+                    content: '❌ Shadow Realm role not configured. Please set it in config.',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
         }
 
         const shadowRealmRole = await guild.roles.fetch(shadowRealmRoleId);
         if (!shadowRealmRole) {
-            return await interaction.reply({
-                content: '❌ Shadow Realm role not found. Please check the role ID.',
-                ephemeral: true
-            });
+            if (interaction.deferred) {
+                return await interaction.editReply({
+                    content: '❌ Shadow Realm role not found. Please check the role ID.'
+                });
+            } else {
+                return await interaction.reply({
+                    content: '❌ Shadow Realm role not found. Please check the role ID.',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
         }
 
         // Refresh member to ensure we have latest role state
@@ -300,10 +312,16 @@ async function processShadowRealmSend(interaction, selectedUser, reason = null) 
                 await targetMember.fetch(true);
             } else {
                 // They have both role and snapshot - they're legitimately in Shadow Realm
-                return await interaction.reply({
-                    content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
-                    ephemeral: true
-                });
+                if (interaction.deferred) {
+                    return await interaction.editReply({
+                        content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`
+                    });
+                } else {
+                    return await interaction.reply({
+                        content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
             }
         }
         
@@ -379,10 +397,16 @@ async function processShadowRealmSend(interaction, selectedUser, reason = null) 
         }
     } catch (error) {
         console.error('❌ Error processing shadow realm send:', error);
-        await interaction.reply({
-            content: `❌ Error: ${error.message}`,
-            ephemeral: true
-        });
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: `❌ Error: ${error.message}`
+            });
+        } else if (!interaction.replied) {
+            await interaction.reply({
+                content: `❌ Error: ${error.message}`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
     }
 }
 
