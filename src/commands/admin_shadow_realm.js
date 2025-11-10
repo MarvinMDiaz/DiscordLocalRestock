@@ -218,8 +218,12 @@ async function handleShadowRealmSendSelect(interaction) {
             });
         }
 
+        // Refresh member to ensure we have latest role state
+        await targetMember.fetch(true);
+
         // Check if user is already in shadow realm (has the role)
-        if (targetMember.roles.cache.has(shadowRealmRoleId)) {
+        const hasShadowRealmRole = targetMember.roles.cache.has(shadowRealmRoleId);
+        if (hasShadowRealmRole) {
             return await interaction.reply({
                 content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
                 ephemeral: true
@@ -228,7 +232,7 @@ async function handleShadowRealmSendSelect(interaction) {
 
         // Check if there's a stale snapshot (user was restored but snapshot wasn't cleared)
         const existingSnapshot = dataManager.getShadowRealmSnapshot(selectedUser.id);
-        if (existingSnapshot && !targetMember.roles.cache.has(shadowRealmRoleId)) {
+        if (existingSnapshot && !hasShadowRealmRole) {
             // User was restored but snapshot still exists - clear it
             console.log(`🧹 Clearing stale snapshot for ${selectedUser.username}`);
             await dataManager.removeShadowRealmSnapshot(
