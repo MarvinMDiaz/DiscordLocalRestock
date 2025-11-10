@@ -333,6 +333,49 @@ module.exports = {
                     return;
                 }
 
+                // Handle Shadow Realm buttons
+                if (customId === 'shadow_realm_button_send') {
+                    const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                    await shadowRealmHandlers.handleSendToShadowRealm(interaction);
+                    return;
+                }
+
+                if (customId === 'shadow_realm_button_restore') {
+                    const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                    await shadowRealmHandlers.handleRestoreFromShadowRealm(interaction);
+                    return;
+                }
+
+                if (customId === 'shadow_realm_button_status') {
+                    const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                    await shadowRealmHandlers.handleShadowRealmStatus(interaction);
+                    return;
+                }
+
+                // Handle admin control panel buttons
+                if (customId.startsWith('admin_')) {
+                    const adminHandlers = require('../utils/adminButtonHandler');
+                    
+                    if (customId === 'admin_remove_cooldown_store_type' || customId.startsWith('admin_remove_cooldown_location_')) {
+                        // These are handled separately below
+                        return;
+                    }
+                    
+                    // Handle clear restocks confirmation buttons
+                    if (customId === 'admin_clear_restocks_confirm_all') {
+                        await adminHandlers.handleConfirmClearAll(interaction);
+                        return;
+                    }
+                    
+                    if (customId === 'admin_clear_restocks_cancel') {
+                        await adminHandlers.handleCancelClearRestocks(interaction);
+                        return;
+                    }
+                    
+                    await adminHandlers.handleAdminButtonClick(interaction);
+                    return;
+                }
+
                 // Handle config setup buttons
                 if (customId.startsWith('admin_config_')) {
                     const configHandlers = require('../utils/configSetupHandler');

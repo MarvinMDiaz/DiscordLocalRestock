@@ -22,6 +22,11 @@ module.exports = {
             subcommand
                 .setName('status')
                 .setDescription('Check Shadow Realm status')
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('setup_buttons')
+                .setDescription('Create Shadow Realm control buttons in the Shadow Realm channel')
         ),
 
     async execute(interaction) {
@@ -47,6 +52,8 @@ module.exports = {
                 await handleRestoreFromShadowRealm(interaction);
             } else if (subcommand === 'status') {
                 await handleShadowRealmStatus(interaction);
+            } else if (subcommand === 'setup_buttons') {
+                await handleSetupShadowRealmButtons(interaction);
             }
         } catch (error) {
             console.error('❌ Error in admin_shadow_realm:', error);
@@ -61,7 +68,13 @@ module.exports = {
 };
 
 async function handleSendToShadowRealm(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    // Check if this is a button interaction (from control panel) or slash command
+    if (interaction.isButton()) {
+        // Button interaction - defer reply
+        await interaction.deferReply({ ephemeral: true });
+    } else {
+        // Slash command - already deferred in main handler
+    }
 
     const userSelect = new UserSelectMenuBuilder()
         .setCustomId('shadow_realm_send_user')
@@ -77,7 +90,13 @@ async function handleSendToShadowRealm(interaction) {
 }
 
 async function handleRestoreFromShadowRealm(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    // Check if this is a button interaction (from control panel) or slash command
+    if (interaction.isButton()) {
+        // Button interaction - defer reply
+        await interaction.deferReply({ ephemeral: true });
+    } else {
+        // Slash command - already deferred in main handler
+    }
 
     // Get all users currently in shadow realm
     const snapshots = dataManager.getShadowRealmSnapshots();
@@ -103,7 +122,23 @@ async function handleRestoreFromShadowRealm(interaction) {
 }
 
 async function handleShadowRealmStatus(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    // Check permissions for button interactions
+    if (interaction.isButton()) {
+        const adminRoleId = config.roles.admin;
+        const member = interaction.member;
+        const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (!hasAdminRole && !hasAdminPermission) {
+            return await interaction.reply({
+                content: '❌ **Access Denied**: You do not have permission to use this.',
+                ephemeral: true
+            });
+        }
+        await interaction.deferReply({ ephemeral: true });
+    } else {
+        // Slash command - already deferred in main handler
+    }
 
     const snapshots = dataManager.getShadowRealmSnapshots();
     
@@ -306,6 +341,73 @@ async function handleShadowRealmRestoreSelect(interaction) {
     }
 }
 
+async function handleSetupShadowRealmButtons(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
+    const shadowRealmChannelId = config.channels.shadowRealm;
+    if (!shadowRealmChannelId) {
+        return await interaction.editReply({
+            content: '❌ Shadow Realm channel not configured. Please set it in config.'
+        });
+    }
+
+    const guild = interaction.guild;
+    const channel = await guild.channels.fetch(shadowRealmChannelId);
+    
+    if (!channel) {
+        return await interaction.editReply({
+            content: `❌ Shadow Realm channel not found. Please check the channel ID: ${shadowRealmChannelId}`
+        });
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(0x2F3136)
+        .setTitle('🔮 Shadow Realm Control Panel')
+        .setDescription('Use the buttons below to manage Shadow Realm users.\n\n**Send to Shadow Realm:** Remove all roles and restrict to this channel\n**Restore from Shadow Realm:** Restore all saved roles\n**Status:** View who is currently in Shadow Realm')
+        .setFooter({ text: 'Only admins can use these controls' })
+        .setTimestamp();
+
+    const buttonRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('shadow_realm_button_send')
+                .setLabel('Send to Shadow Realm')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔮'),
+            new ButtonBuilder()
+                .setCustomId('shadow_realm_button_restore')
+                .setLabel('Restore from Shadow Realm')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✨'),
+            new ButtonBuilder()
+                .setCustomId('shadow_realm_button_status')
+                .setLabel('View Status')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('📊')
+        );
+
+    try {
+        await channel.send({
+            embeds: [embed],
+            components: [buttonRow]
+        });
+
+        await interaction.editReply({
+            content: `✅ Shadow Realm control panel created in <#${shadowRealmChannelId}>`
+        });
+
+        console.log(`✅ Admin ${interaction.user.username} set up Shadow Realm buttons in channel ${shadowRealmChannelId}`);
+    } catch (error) {
+        console.error('❌ Error setting up Shadow Realm buttons:', error);
+        await interaction.editReply({
+            content: `❌ Error: ${error.message}`
+        });
+    }
+}
+
 module.exports.handleShadowRealmSendSelect = handleShadowRealmSendSelect;
 module.exports.handleShadowRealmRestoreSelect = handleShadowRealmRestoreSelect;
+module.exports.handleSendToShadowRealm = handleSendToShadowRealm;
+module.exports.handleRestoreFromShadowRealm = handleRestoreFromShadowRealm;
+module.exports.handleShadowRealmStatus = handleShadowRealmStatus;
 
