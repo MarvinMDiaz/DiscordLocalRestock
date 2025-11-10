@@ -68,9 +68,19 @@ module.exports = {
 };
 
 async function handleSendToShadowRealm(interaction) {
-    // Check if this is a button interaction (from control panel) or slash command
+    // Check permissions for button interactions
     if (interaction.isButton()) {
-        // Button interaction - defer reply
+        const adminRoleId = config.roles.admin;
+        const member = interaction.member;
+        const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (!hasAdminRole && !hasAdminPermission) {
+            return await interaction.reply({
+                content: '❌ **Access Denied**: You do not have permission to use this.',
+                ephemeral: true
+            });
+        }
         await interaction.deferReply({ ephemeral: true });
     } else {
         // Slash command - already deferred in main handler
@@ -90,9 +100,19 @@ async function handleSendToShadowRealm(interaction) {
 }
 
 async function handleRestoreFromShadowRealm(interaction) {
-    // Check if this is a button interaction (from control panel) or slash command
+    // Check permissions for button interactions
     if (interaction.isButton()) {
-        // Button interaction - defer reply
+        const adminRoleId = config.roles.admin;
+        const member = interaction.member;
+        const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (!hasAdminRole && !hasAdminPermission) {
+            return await interaction.reply({
+                content: '❌ **Access Denied**: You do not have permission to use this.',
+                ephemeral: true
+            });
+        }
         await interaction.deferReply({ ephemeral: true });
     } else {
         // Slash command - already deferred in main handler
