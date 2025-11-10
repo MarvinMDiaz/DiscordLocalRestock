@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, InteractionResponseFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../config/config.json');
 
 module.exports = {
@@ -8,7 +8,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const channelId = config.channels.reactionRoles || '1381823226493272094';
         const messageId = config.channels.reactionRoleMessageId || '1434620131002159176';
@@ -96,6 +96,9 @@ module.exports = {
                 errors: []
             };
 
+            // Store all users who reacted (for cleanup phase)
+            const allReactedUserIds = new Map(); // emoji -> Set of user IDs
+
             // Process each emoji reaction
             for (const [emojiName, roleInfo] of Object.entries(emojiToRole)) {
                 const reaction = message.reactions.cache.get(emojiName);
@@ -151,8 +154,13 @@ module.exports = {
                     
                     console.log(`📊 Found ${humanCount} human users (${allUsers.size} total) who reacted with ${emojiName} (reaction count: ${expectedCount})`);
                     
+                    // Store reacted user IDs for cleanup phase
+                    allReactedUserIds.set(emojiName, reactedUserIds);
+                    
                     if (allUsers.size < expectedCount - 2) {
                         console.warn(`⚠️ Still missing some users: fetched ${allUsers.size} but expected ${expectedCount}`);
+                        // If we didn't get all users, don't do cleanup for this emoji (safety)
+                        console.warn(`⚠️ Skipping cleanup for ${emojiName} due to incomplete user fetch`);
                     }
                 } catch (error) {
                     console.error(`❌ Error fetching users for ${emojiName}:`, error);
@@ -198,44 +206,24 @@ module.exports = {
             }
             
             // Also check for users who have roles but didn't react (cleanup orphaned roles)
-            // Get all members with each role and check if they reacted
+            // ONLY if we successfully fetched all users for that emoji
+            // Use the data we already fetched above to avoid double-fetching
             for (const [emojiName, roleInfo] of Object.entries(emojiToRole)) {
+                // Only do cleanup if we successfully fetched all users for this emoji
+                const reactedUserIds = allReactedUserIds.get(emojiName);
+                if (!reactedUserIds) {
+                    console.log(`⚠️ Skipping cleanup for ${emojiName} - user fetch was incomplete or failed`);
+                    continue;
+                }
+                
                 const reaction = message.reactions.cache.get(emojiName);
                 if (!reaction) continue;
                 
-                // Get all users who reacted (paginate to get all)
-                let reactedUserIds = new Set();
-                try {
-                    const expectedCount = reaction.count;
-                    const batchSize = 100;
-                    let lastUserId = null;
-                    let fetchedCount = 0;
-                    
-                    // Fetch all users in batches
-                    while (fetchedCount < expectedCount) {
-                        const fetchOptions = { limit: batchSize };
-                        if (lastUserId) {
-                            fetchOptions.after = lastUserId;
-                        }
-                        
-                        const fetchedUsers = await reaction.users.fetch(fetchOptions);
-                        if (fetchedUsers.size === 0) break;
-                        
-                        fetchedUsers.forEach((user, userId) => {
-                            if (!user.bot && !reactedUserIds.has(userId)) {
-                                reactedUserIds.add(userId);
-                                fetchedCount++;
-                                lastUserId = userId;
-                            }
-                        });
-                        
-                        if (fetchedUsers.size < batchSize) break;
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                    
-                    console.log(`📋 Found ${reactedUserIds.size} users who reacted with ${emojiName} (for cleanup check)`);
-                } catch (error) {
-                    console.error(`❌ Error fetching reacted users for cleanup ${emojiName}:`, error);
+                // Safety check: only cleanup if we fetched close to the expected count
+                const expectedCount = reaction.count;
+                const fetchedCount = reactedUserIds.size;
+                if (fetchedCount < expectedCount - 5) {
+                    console.warn(`⚠️ Skipping cleanup for ${emojiName} - fetched ${fetchedCount} but expected ${expectedCount} (too many missing)`);
                     continue;
                 }
                 
