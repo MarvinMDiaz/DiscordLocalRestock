@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const config = require('../../config/config.json');
 const dataManager = require('../utils/dataManager');
 const interactionLogger = require('../utils/interactionLogger');
@@ -86,7 +86,25 @@ async function handleSendToShadowRealm(interaction) {
                 ephemeral: true
             });
         }
-        await interaction.deferReply({ ephemeral: true });
+        
+        // Show modal to get reason when using button
+        const modal = new ModalBuilder()
+            .setCustomId('shadow_realm_send_modal')
+            .setTitle('Send to Shadow Realm');
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('Reason (Optional)')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Enter reason for sending to Shadow Realm...')
+            .setRequired(false)
+            .setMaxLength(500);
+
+        const reasonRow = new ActionRowBuilder().addComponents(reasonInput);
+        modal.addComponents(reasonRow);
+
+        await interaction.showModal(modal);
+        return;
     } else {
         // Slash command - defer reply
         await interaction.deferReply({ ephemeral: true });

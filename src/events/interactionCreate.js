@@ -7,7 +7,7 @@ async function handleLastCheckedStoreSelect(interaction, region) {
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
         const config = require('../../config/config.json');
-        
+
         const storeTypeSelect = new StringSelectMenuBuilder()
             .setCustomId(`last_checked_store_${region}_type`)
             .setPlaceholder('Select store type...')
@@ -38,10 +38,10 @@ async function handleLastCheckedStoreLocation(interaction, region, storeType) {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
         const config = require('../../config/config.json');
         const buttonHandlers = require('../utils/buttonRestockHandler');
-        
+
         let stores = [];
         if (storeType === 'target') {
-            stores = region === 'va' 
+            stores = region === 'va'
                 ? (config.stores?.target?.va || [])
                 : (config.stores?.target?.md || []);
         } else if (storeType === 'bestbuy') {
@@ -185,43 +185,43 @@ module.exports = {
 
                 // Handle button-based restock reporting
                 const buttonHandlers = require('../utils/buttonRestockHandler');
-                
+
                 if (customId === 'report_restock_button_va') {
                     await buttonHandlers.handleRestockButtonClick(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId === 'report_restock_button_md') {
                     await buttonHandlers.handleRestockButtonClick(interaction, 'md');
                     return;
                 }
-                
+
                 if (customId === 'report_past_restock_button_va') {
                     await buttonHandlers.handlePastRestockButtonClick(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId === 'report_past_restock_button_md') {
                     await buttonHandlers.handlePastRestockButtonClick(interaction, 'md');
                     return;
                 }
-                
+
                 if (customId === 'report_upcoming_restock_button_va') {
                     await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId === 'report_upcoming_restock_button_md') {
                     await buttonHandlers.handleUpcomingRestockButtonClick(interaction, 'md');
                     return;
                 }
-                
+
                 // Handle lookup button clicks
                 if (customId === 'lookup_restocks_button_va') {
                     await buttonHandlers.handleLookupButtonClick(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId === 'lookup_restocks_button_md') {
                     await buttonHandlers.handleLookupButtonClick(interaction, 'md');
                     return;
@@ -238,7 +238,7 @@ module.exports = {
                     }
                     return;
                 }
-                
+
                 if (customId === 'last_checked_button_md') {
                     console.log(`🔍 [InteractionCreate] Handling last_checked_button_md`);
                     try {
@@ -255,7 +255,7 @@ module.exports = {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId === 'check_store_button_md') {
                     await buttonHandlers.handleCheckStoreButtonClick(interaction, 'md');
                     return;
@@ -266,7 +266,7 @@ module.exports = {
                     await buttonHandlers.handleCheckStoreCurrentTime(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId.startsWith('check_store_current_md_')) {
                     await buttonHandlers.handleCheckStoreCurrentTime(interaction, 'md');
                     return;
@@ -277,7 +277,7 @@ module.exports = {
                     await buttonHandlers.handleConfirmInProgress(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId.startsWith('confirm_in_progress_md_')) {
                     await buttonHandlers.handleConfirmInProgress(interaction, 'md');
                     return;
@@ -287,7 +287,7 @@ module.exports = {
                     await buttonHandlers.handleConfirmPast(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId.startsWith('confirm_past_md_')) {
                     await buttonHandlers.handleConfirmPast(interaction, 'md');
                     return;
@@ -297,7 +297,7 @@ module.exports = {
                     await buttonHandlers.handleConfirmUpcoming(interaction, 'va');
                     return;
                 }
-                
+
                 if (customId.startsWith('confirm_upcoming_md_')) {
                     await buttonHandlers.handleConfirmUpcoming(interaction, 'md');
                     return;
@@ -308,27 +308,27 @@ module.exports = {
                     await buttonHandlers.handleCancelReport(interaction);
                     return;
                 }
-                
+
                 // Handle admin control panel buttons
                 if (customId.startsWith('admin_')) {
                     const adminHandlers = require('../utils/adminButtonHandler');
-                    
+
                     if (customId === 'admin_remove_cooldown_store_type' || customId.startsWith('admin_remove_cooldown_location_')) {
                         // These are handled separately below
                         return;
                     }
-                    
+
                     // Handle clear restocks confirmation buttons
                     if (customId === 'admin_clear_restocks_confirm_all') {
                         await adminHandlers.handleConfirmClearAll(interaction);
                         return;
                     }
-                    
+
                     if (customId === 'admin_clear_restocks_cancel') {
                         await adminHandlers.handleCancelClearRestocks(interaction);
                         return;
                     }
-                    
+
                     await adminHandlers.handleAdminButtonClick(interaction);
                     return;
                 }
@@ -355,23 +355,23 @@ module.exports = {
                 // Handle admin control panel buttons
                 if (customId.startsWith('admin_')) {
                     const adminHandlers = require('../utils/adminButtonHandler');
-                    
+
                     if (customId === 'admin_remove_cooldown_store_type' || customId.startsWith('admin_remove_cooldown_location_')) {
                         // These are handled separately below
                         return;
                     }
-                    
+
                     // Handle clear restocks confirmation buttons
                     if (customId === 'admin_clear_restocks_confirm_all') {
                         await adminHandlers.handleConfirmClearAll(interaction);
                         return;
                     }
-                    
+
                     if (customId === 'admin_clear_restocks_cancel') {
                         await adminHandlers.handleCancelClearRestocks(interaction);
                         return;
                     }
-                    
+
                     await adminHandlers.handleAdminButtonClick(interaction);
                     return;
                 }
@@ -379,7 +379,7 @@ module.exports = {
                 // Handle config setup buttons
                 if (customId.startsWith('admin_config_')) {
                     const configHandlers = require('../utils/configSetupHandler');
-                    
+
                     if (customId === 'admin_config_quick_setup') {
                         await configHandlers.handleQuickSetupSelect(interaction);
                         return;
@@ -418,7 +418,7 @@ module.exports = {
                 console.error('❌ Error handling button interaction:', error);
                 console.error('Button customId:', interaction.customId);
                 console.error('Error stack:', error.stack);
-                
+
                 if (!interaction.replied && !interaction.deferred) {
                     try {
                         await interaction.reply({
@@ -444,7 +444,7 @@ module.exports = {
         // Handle user select menu interactions (for Shadow Realm)
         if (interaction.isUserSelectMenu()) {
             const { customId } = interaction;
-            
+
             if (customId === 'shadow_realm_send_user' || customId.startsWith('shadow_realm_send_user_')) {
                 const shadowRealmHandlers = require('../commands/admin_shadow_realm');
                 await shadowRealmHandlers.handleShadowRealmSendSelect(interaction);
@@ -490,7 +490,7 @@ module.exports = {
                 }
                 return;
             }
-            
+
             if (customId === 'last_checked_mode_md') {
                 console.log(`🔍 [InteractionCreate] Handling last_checked_mode_md, selected: ${interaction.values[0]}`);
                 try {
@@ -520,7 +520,7 @@ module.exports = {
                 }
                 return;
             }
-            
+
             if (customId === 'last_checked_store_md_type') {
                 console.log(`🔍 [InteractionCreate] Handling last_checked_store_md_type, selected: ${interaction.values[0]}`);
                 try {
@@ -541,7 +541,7 @@ module.exports = {
                     const parts = customId.split('_');
                     const storeType = parts[parts.length - 1];
                     console.log(`🔍 [InteractionCreate] Extracted storeType: ${storeType} from customId: ${customId}`);
-                    
+
                     if (storeType !== 'type' && storeType !== 'va' && storeType !== 'md') {
                         const storeName = interaction.values[0];
                         console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
@@ -555,7 +555,7 @@ module.exports = {
                 }
                 return;
             }
-            
+
             if (customId.startsWith('last_checked_store_md_') && customId !== 'last_checked_store_md_type') {
                 console.log(`🔍 [InteractionCreate] Handling last_checked_store_md location, customId: ${customId}`);
                 try {
@@ -563,7 +563,7 @@ module.exports = {
                     const parts = customId.split('_');
                     const storeType = parts[parts.length - 1];
                     console.log(`🔍 [InteractionCreate] Extracted storeType: ${storeType} from customId: ${customId}`);
-                    
+
                     if (storeType !== 'type' && storeType !== 'va' && storeType !== 'md') {
                         const storeName = interaction.values[0];
                         console.log(`🔍 [InteractionCreate] Selected store: ${storeName}`);
@@ -619,7 +619,7 @@ module.exports = {
                 await buttonHandlers.handleStoreTypeSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId === 'restock_store_type_md') {
                 await buttonHandlers.handleStoreTypeSelect(interaction, 'md');
                 return;
@@ -630,7 +630,7 @@ module.exports = {
                 await buttonHandlers.handleLocationSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('restock_location_md_')) {
                 await buttonHandlers.handleLocationSelect(interaction, 'md');
                 return;
@@ -641,7 +641,7 @@ module.exports = {
                 await buttonHandlers.handlePastRestockStoreTypeSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId === 'past_restock_store_type_md') {
                 await buttonHandlers.handlePastRestockStoreTypeSelect(interaction, 'md');
                 return;
@@ -652,7 +652,7 @@ module.exports = {
                 await buttonHandlers.handlePastRestockLocationSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('past_restock_location_md_')) {
                 await buttonHandlers.handlePastRestockLocationSelect(interaction, 'md');
                 return;
@@ -663,7 +663,7 @@ module.exports = {
                 await buttonHandlers.handlePastRestockDateSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('past_restock_date_select_md_')) {
                 await buttonHandlers.handlePastRestockDateSelect(interaction, 'md');
                 return;
@@ -674,7 +674,7 @@ module.exports = {
                 await buttonHandlers.handleUpcomingRestockStoreTypeSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId === 'upcoming_restock_store_type_md') {
                 await buttonHandlers.handleUpcomingRestockStoreTypeSelect(interaction, 'md');
                 return;
@@ -685,7 +685,7 @@ module.exports = {
                 await buttonHandlers.handleUpcomingRestockLocationSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('upcoming_restock_location_md_')) {
                 await buttonHandlers.handleUpcomingRestockLocationSelect(interaction, 'md');
                 return;
@@ -696,7 +696,7 @@ module.exports = {
                 await buttonHandlers.handleUpcomingRestockDateSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('upcoming_restock_date_select_md_')) {
                 await buttonHandlers.handleUpcomingRestockDateSelect(interaction, 'md');
                 return;
@@ -707,7 +707,7 @@ module.exports = {
                 await buttonHandlers.handleCheckStoreTypeSelect(interaction, 'va');
                 return;
             }
-            
+
             if (customId === 'check_store_type_md') {
                 await buttonHandlers.handleCheckStoreTypeSelect(interaction, 'md');
                 return;
@@ -718,7 +718,7 @@ module.exports = {
                 await buttonHandlers.handleCheckStoreLocation(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('check_store_location_md_')) {
                 await buttonHandlers.handleCheckStoreLocation(interaction, 'md');
                 return;
@@ -729,7 +729,7 @@ module.exports = {
                 await buttonHandlers.handleCheckStoreHour(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('check_store_hour_md_')) {
                 await buttonHandlers.handleCheckStoreHour(interaction, 'md');
                 return;
@@ -740,7 +740,7 @@ module.exports = {
                 await buttonHandlers.handleCheckStoreMinute(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('check_store_minute_md_')) {
                 await buttonHandlers.handleCheckStoreMinute(interaction, 'md');
                 return;
@@ -751,7 +751,7 @@ module.exports = {
                 await buttonHandlers.handleCheckStoreAmPm(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('check_store_ampm_md_')) {
                 await buttonHandlers.handleCheckStoreAmPm(interaction, 'md');
                 return;
@@ -835,14 +835,21 @@ module.exports = {
                 await handleApproveWithNoteSubmit(interaction);
                 return;
             }
-            
+
+            // Handle Shadow Realm send modal
+            if (customId === 'shadow_realm_send_modal') {
+                const shadowRealmHandlers = require('../commands/admin_shadow_realm');
+                await shadowRealmHandlers.handleShadowRealmSendModal(interaction);
+                return;
+            }
+
             // Handle past restock date modal submissions
             if (customId.startsWith('past_restock_date_va_')) {
                 const { handlePastRestockDateSubmit } = require('../utils/buttonRestockHandler');
                 await handlePastRestockDateSubmit(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('past_restock_date_md_')) {
                 const { handlePastRestockDateSubmit } = require('../utils/buttonRestockHandler');
                 await handlePastRestockDateSubmit(interaction, 'md');
@@ -855,7 +862,7 @@ module.exports = {
                 await handleUpcomingRestockNoteSubmit(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('upcoming_restock_note_md_')) {
                 const { handleUpcomingRestockNoteSubmit } = require('../utils/buttonRestockHandler');
                 await handleUpcomingRestockNoteSubmit(interaction, 'md');
@@ -868,7 +875,7 @@ module.exports = {
                 await handleCustomStoreNameInProgress(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('custom_store_name_in_progress_md_')) {
                 const { handleCustomStoreNameInProgress } = require('../utils/buttonRestockHandler');
                 await handleCustomStoreNameInProgress(interaction, 'md');
@@ -881,7 +888,7 @@ module.exports = {
                 await handleCustomStoreNameUpcoming(interaction, 'va');
                 return;
             }
-            
+
             if (customId.startsWith('custom_store_name_upcoming_md_')) {
                 const { handleCustomStoreNameUpcoming } = require('../utils/buttonRestockHandler');
                 await handleCustomStoreNameUpcoming(interaction, 'md');
@@ -940,7 +947,7 @@ module.exports = {
 // Helper functions for store management
 async function handleStoreAddType(interaction) {
     const storeType = interaction.values[0];
-    
+
     const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
     const regionSelect = new StringSelectMenuBuilder()
         .setCustomId(`admin_store_add_region_${storeType}_`)
@@ -959,7 +966,7 @@ async function handleStoreAddType(interaction) {
 
 async function handleStoreRemoveType(interaction) {
     const storeType = interaction.values[0];
-    
+
     const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
     const regionSelect = new StringSelectMenuBuilder()
         .setCustomId(`admin_store_remove_region_${storeType}_`)
@@ -984,7 +991,7 @@ async function handleStoreRemoveRegion(interaction) {
 
     const configManager = require('../utils/configManager');
     const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-    
+
     const stores = await configManager.getAllStores();
     const regionStores = stores[storeType]?.[region] || [];
 
