@@ -445,7 +445,7 @@ module.exports = {
         if (interaction.isUserSelectMenu()) {
             const { customId } = interaction;
             
-            if (customId === 'shadow_realm_send_user') {
+            if (customId === 'shadow_realm_send_user' || customId.startsWith('shadow_realm_send_user_')) {
                 const shadowRealmHandlers = require('../commands/admin_shadow_realm');
                 await shadowRealmHandlers.handleShadowRealmSendSelect(interaction);
                 return;

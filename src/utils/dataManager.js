@@ -430,7 +430,7 @@ class DataManager {
     }
 
     // Save role snapshot before sending to shadow realm
-    async saveShadowRealmSnapshot(userId, username, roles, sentBy, sentByUsername) {
+    async saveShadowRealmSnapshot(userId, username, roles, sentBy, sentByUsername, reason = null) {
         if (!this.data.shadow_realm_snapshots) {
             this.data.shadow_realm_snapshots = [];
         }
@@ -441,7 +441,8 @@ class DataManager {
             roles: roles, // Array of role IDs
             sent_at: new Date().toISOString(),
             sent_by: sentBy,
-            sent_by_username: sentByUsername
+            sent_by_username: sentByUsername,
+            reason: reason || null
         };
 
         // Remove existing snapshot if any

@@ -12,6 +12,11 @@ module.exports = {
             subcommand
                 .setName('send')
                 .setDescription('Send a user to Shadow Realm')
+                .addStringOption(option =>
+                    option.setName('reason')
+                        .setDescription('Reason for sending to Shadow Realm (optional)')
+                        .setRequired(false)
+                )
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -83,18 +88,27 @@ async function handleSendToShadowRealm(interaction) {
         }
         await interaction.deferReply({ ephemeral: true });
     } else {
-        // Slash command - already deferred in main handler
+        // Slash command - defer reply
+        await interaction.deferReply({ ephemeral: true });
     }
 
+    // Get reason from slash command option (if provided)
+    const reason = interaction.isCommand() ? interaction.options.getString('reason') : null;
+    
+    // Encode reason in customId if provided (max customId length is 100, so we'll truncate if needed)
+    const customId = reason 
+        ? `shadow_realm_send_user_${Buffer.from(reason.substring(0, 80)).toString('base64')}` 
+        : 'shadow_realm_send_user';
+
     const userSelect = new UserSelectMenuBuilder()
-        .setCustomId('shadow_realm_send_user')
+        .setCustomId(customId)
         .setPlaceholder('Select user to send to Shadow Realm...')
         .setMaxValues(1);
 
     const row = new ActionRowBuilder().addComponents(userSelect);
 
     await interaction.editReply({
-        content: '**🔮 Send to Shadow Realm**\n\nSelect the user you want to send to Shadow Realm. They will lose all roles and only be able to see the Shadow Realm channel.',
+        content: '**🔮 Send to Shadow Realm**\n\nSelect the user you want to send to Shadow Realm. They will lose all roles and only be able to see the Shadow Realm channel.' + (reason ? `\n\n**Reason:** ${reason}` : ''),
         components: [row]
     });
 }
@@ -173,11 +187,11 @@ async function handleShadowRealmStatus(interaction) {
         .setTitle('🔮 Shadow Realm Status')
         .setDescription(`**${snapshots.length}** user(s) currently in Shadow Realm`);
 
-    const fields = snapshots.slice(0, 10).map(snapshot => ({
-        name: snapshot.username || `User ${snapshot.user_id}`,
-        value: `Sent: <t:${Math.floor(new Date(snapshot.sent_at).getTime() / 1000)}:R>\nBy: ${snapshot.sent_by_username || 'Unknown'}\nRoles saved: ${snapshot.roles?.length || 0}`,
-        inline: true
-    }));
+        const fields = snapshots.slice(0, 10).map(snapshot => ({
+            name: snapshot.username || `User ${snapshot.user_id}`,
+            value: `Sent: <t:${Math.floor(new Date(snapshot.sent_at).getTime() / 1000)}:R>\nBy: ${snapshot.sent_by_username || 'Unknown'}\nRoles saved: ${snapshot.roles?.length || 0}${snapshot.reason ? `\nReason: ${snapshot.reason}` : ''}`,
+            inline: true
+        }));
 
     embed.addFields(fields);
 
@@ -197,6 +211,18 @@ async function handleShadowRealmSendSelect(interaction) {
                 content: '❌ No user selected.',
                 ephemeral: true
             });
+        }
+
+        // Extract reason from customId if present
+        let reason = null;
+        const customId = interaction.customId;
+        if (customId.startsWith('shadow_realm_send_user_')) {
+            try {
+                const encodedReason = customId.replace('shadow_realm_send_user_', '');
+                reason = Buffer.from(encodedReason, 'base64').toString('utf-8');
+            } catch (error) {
+                console.error('❌ Error decoding reason from customId:', error);
+            }
         }
 
         const guild = interaction.guild;
@@ -266,7 +292,8 @@ async function handleShadowRealmSendSelect(interaction) {
             selectedUser.username,
             userRoles,
             interaction.user.id,
-            interaction.user.username
+            interaction.user.username,
+            reason
         );
 
         // Remove all roles except @everyone
@@ -280,14 +307,14 @@ async function handleShadowRealmSendSelect(interaction) {
             await interactionLogger.logAdminAction(interaction.client, {
                 admin: `${interaction.user.tag} (${interaction.user.id})`,
                 action: 'Send to Shadow Realm',
-                details: `User: ${selectedUser.tag} (${selectedUser.id})\nRoles removed: ${userRoles.length}`
+                details: `User: ${selectedUser.tag} (${selectedUser.id})\nRoles removed: ${userRoles.length}${reason ? `\nReason: ${reason}` : ''}`
             });
         } catch (logError) {
             console.error('❌ Error logging admin action:', logError);
         }
 
         await interaction.reply({
-            content: `✅ **${selectedUser.username}** has been sent to Shadow Realm.\n\n**Roles removed:** ${userRoles.length}\n**Roles saved for restoration.**`,
+            content: `✅ **${selectedUser.username}** has been sent to Shadow Realm.\n\n**Roles removed:** ${userRoles.length}\n**Roles saved for restoration.**${reason ? `\n\n**Reason:** ${reason}` : ''}`,
             ephemeral: true
         });
 
@@ -297,8 +324,9 @@ async function handleShadowRealmSendSelect(interaction) {
             try {
                 const notificationsChannel = await guild.channels.fetch(shadowRealmNotificationsChannelId);
                 if (notificationsChannel) {
+                    const notificationMessage = `🔮 **${selectedUser.username}** has been sent to the shadow realm.\n\nIf you want to return to society, create a ticket as to why.${reason ? `\n\n**Reason:** ${reason}` : ''}`;
                     await notificationsChannel.send({
-                        content: `🔮 **${selectedUser.username}** has been sent to the shadow realm.\n\nIf you want to return to society, create a ticket as to why.`
+                        content: notificationMessage
                     });
                 }
             } catch (error) {
