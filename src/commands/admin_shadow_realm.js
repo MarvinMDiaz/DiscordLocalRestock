@@ -218,12 +218,24 @@ async function handleShadowRealmSendSelect(interaction) {
             });
         }
 
-        // Check if user is already in shadow realm
+        // Check if user is already in shadow realm (has the role)
         if (targetMember.roles.cache.has(shadowRealmRoleId)) {
             return await interaction.reply({
                 content: `⚠️ ${selectedUser.username} is already in Shadow Realm.`,
                 ephemeral: true
             });
+        }
+
+        // Check if there's a stale snapshot (user was restored but snapshot wasn't cleared)
+        const existingSnapshot = dataManager.getShadowRealmSnapshot(selectedUser.id);
+        if (existingSnapshot && !targetMember.roles.cache.has(shadowRealmRoleId)) {
+            // User was restored but snapshot still exists - clear it
+            console.log(`🧹 Clearing stale snapshot for ${selectedUser.username}`);
+            await dataManager.removeShadowRealmSnapshot(
+                selectedUser.id,
+                interaction.user.id,
+                interaction.user.username
+            );
         }
 
         // Get all user's roles (excluding @everyone)
