@@ -305,21 +305,6 @@ async function handleShadowRealmSendSelect(interaction) {
                 console.error('❌ Error sending notification to Shadow Realm notifications channel:', error);
             }
         }
-
-        // Send message to shadow realm channel (where the user is sent)
-        const shadowRealmChannelId = config.channels.shadowRealm;
-        if (shadowRealmChannelId) {
-            try {
-                const shadowRealmChannel = await guild.channels.fetch(shadowRealmChannelId);
-                if (shadowRealmChannel) {
-                    await shadowRealmChannel.send({
-                        content: `🔮 **${selectedUser.username}** has been sent to Shadow Realm.\n\nYou can only see this channel. Use \`/admin_shadow_realm restore\` to restore your roles.`
-                    });
-                }
-            } catch (error) {
-                console.error('❌ Error sending message to Shadow Realm channel:', error);
-            }
-        }
     } catch (error) {
         console.error('❌ Error handling shadow realm send select:', error);
         await interaction.reply({
