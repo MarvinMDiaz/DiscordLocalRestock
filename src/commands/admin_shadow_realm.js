@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 const config = require('../../config/config.json');
 const dataManager = require('../utils/dataManager');
 const interactionLogger = require('../utils/interactionLogger');
@@ -350,10 +350,17 @@ async function processShadowRealmSend(interaction, selectedUser, reason = null) 
             console.error('❌ Error logging admin action:', logError);
         }
 
-        await interaction.reply({
-            content: `✅ **${selectedUser.username}** has been sent to Shadow Realm.\n\n**Roles removed:** ${userRoles.length}\n**Roles saved for restoration.**${reason ? `\n\n**Reason:** ${reason}` : ''}`,
-            ephemeral: true
-        });
+        // Reply or edit reply depending on interaction state
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: `✅ **${selectedUser.username}** has been sent to Shadow Realm.\n\n**Roles removed:** ${userRoles.length}\n**Roles saved for restoration.**${reason ? `\n\n**Reason:** ${reason}` : ''}`
+            });
+        } else if (!interaction.replied) {
+            await interaction.reply({
+                content: `✅ **${selectedUser.username}** has been sent to Shadow Realm.\n\n**Roles removed:** ${userRoles.length}\n**Roles saved for restoration.**${reason ? `\n\n**Reason:** ${reason}` : ''}`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
 
         // Send notification to Shadow Realm notifications channel
         const shadowRealmNotificationsChannelId = config.channels.shadowRealmNotifications || '1435751467972558928';
