@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
 const dataManager = require('./dataManager');
 const configManager = require('./configManager');
 const config = require('../../config/config.json');
@@ -51,6 +51,9 @@ async function handleAdminButtonClick(interaction) {
                 break;
             case 'admin_manage_stores':
                 await handleManageStores(interaction);
+                break;
+            case 'admin_setup_reaction_roles_button':
+                await handleSetupReactionRolesButton(interaction);
                 break;
             default:
                 await interaction.reply({

@@ -126,7 +126,12 @@ module.exports = {
                         .setCustomId('admin_manage_stores')
                         .setLabel('Manage Stores')
                         .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('🏪')
+                        .setEmoji('🏪'),
+                    new ButtonBuilder()
+                        .setCustomId('admin_setup_reaction_roles_button')
+                        .setLabel('Setup Reaction Roles')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('🔔')
                 );
 
             await channel.send({

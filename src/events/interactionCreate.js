@@ -458,6 +458,17 @@ module.exports = {
             }
         }
 
+        // Handle channel select menu interactions
+        if (interaction.isChannelSelectMenu()) {
+            const { customId } = interaction;
+            
+            if (customId === 'admin_reaction_roles_channel_select') {
+                const adminHandlers = require('../utils/adminButtonHandler');
+                await adminHandlers.handleReactionRolesChannelSelect(interaction);
+                return;
+            }
+        }
+
         // Handle select menu interactions (for button-based restock reporting)
         if (interaction.isStringSelectMenu()) {
             // Log the select menu interaction
