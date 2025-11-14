@@ -115,9 +115,31 @@ module.exports = {
                 try {
                     member = await guild.members.fetch(user.id);
                     console.log(`🔄 Refreshed member ${user.username} - Current roles: ${member.roles.cache.map(r => r.name).join(', ')}`);
+                    console.log(`🔍 User is admin: ${member.permissions.has('Administrator')}`);
+                    console.log(`🔍 User's highest role: ${member.roles.highest.name} (position: ${member.roles.highest.position})`);
                 } catch (error) {
                     console.error(`❌ Error refreshing member ${user.username}:`, error.message);
                     return false;
+                }
+
+                // Check bot role hierarchy
+                const botRole = botMember.roles.highest;
+                const isBotOwner = guild.ownerId === reaction.client.user.id;
+                const userHighestRole = member.roles.highest;
+                
+                console.log(`🔍 Bot role: ${botRole.name} (position: ${botRole.position})`);
+                console.log(`🔍 Target role: ${role.name} (position: ${role.position})`);
+                console.log(`🔍 User highest role: ${userHighestRole.name} (position: ${userHighestRole.position})`);
+                
+                // Check if bot can manage this role
+                if (!isBotOwner && botRole.position <= role.position) {
+                    console.error(`❌ Bot's role (${botRole.name}) is not higher than ${roleName} role (${role.name}). Bot role position: ${botRole.position}, ${roleName} role position: ${role.position}`);
+                    return false;
+                }
+                
+                // Check if user's highest role is higher than bot's role (this can prevent role changes)
+                if (!isBotOwner && userHighestRole.position >= botRole.position && userHighestRole.id !== guild.id) {
+                    console.warn(`⚠️ User ${user.username} has role ${userHighestRole.name} (position: ${userHighestRole.position}) which is >= bot's role (position: ${botRole.position}). This may prevent role changes.`);
                 }
 
                 // Check if user has the role
@@ -142,10 +164,22 @@ module.exports = {
                     const stillHasRole = member.roles.cache.has(roleId);
                     console.log(`🔍 Verification - User ${user.username} still has ${roleName} role: ${stillHasRole}`);
                     
+                    if (stillHasRole) {
+                        console.error(`❌ Role removal failed - user still has the role! This may be due to role hierarchy or permissions.`);
+                    }
+                    
                     return true;
                 } catch (error) {
                     console.error(`❌ Error removing ${roleName} role from ${user.username}:`, error.message);
                     console.error(`❌ Error code: ${error.code}, Error details:`, error);
+                    
+                    // Check for specific Discord error codes
+                    if (error.code === 50013) {
+                        console.error(`❌ Missing Permissions: Bot doesn't have permission to manage roles`);
+                    } else if (error.code === 50035) {
+                        console.error(`❌ Invalid Form Body: Role hierarchy issue`);
+                    }
+                    
                     return false;
                 }
             };

@@ -102,14 +102,26 @@ module.exports = {
                     return false;
                 }
 
-                // Check if bot's role is higher than the role being assigned
-                // Bot can manage roles if it's the guild owner OR if its highest role is above the target role
+                // Check bot role hierarchy
                 const botRole = botMember.roles.highest;
                 const isBotOwner = guild.ownerId === reaction.client.user.id;
+                const userHighestRole = member.roles.highest;
                 
+                console.log(`🔍 Bot role: ${botRole.name} (position: ${botRole.position})`);
+                console.log(`🔍 Target role: ${role.name} (position: ${role.position})`);
+                console.log(`🔍 User highest role: ${userHighestRole.name} (position: ${userHighestRole.position})`);
+                console.log(`🔍 User is admin: ${member.permissions.has('Administrator')}`);
+                
+                // Check if bot's role is higher than the role being assigned
+                // Bot can manage roles if it's the guild owner OR if its highest role is above the target role
                 if (!isBotOwner && botRole.position <= role.position) {
                     console.error(`❌ Bot's role (${botRole.name}) is not higher than ${roleName} role (${role.name}). Bot role position: ${botRole.position}, ${roleName} role position: ${role.position}`);
                     return false;
+                }
+                
+                // Check if user's highest role is higher than bot's role (this can prevent role changes)
+                if (!isBotOwner && userHighestRole.position >= botRole.position && userHighestRole.id !== guild.id) {
+                    console.warn(`⚠️ User ${user.username} has role ${userHighestRole.name} (position: ${userHighestRole.position}) which is >= bot's role (position: ${botRole.position}). This may prevent role changes.`);
                 }
 
                 // Check if user already has the role
@@ -131,10 +143,22 @@ module.exports = {
                     const nowHasRole = member.roles.cache.has(roleId);
                     console.log(`🔍 Verification - User ${user.username} now has ${roleName} role: ${nowHasRole}`);
                     
+                    if (!nowHasRole) {
+                        console.error(`❌ Role addition failed - user doesn't have the role! This may be due to role hierarchy or permissions.`);
+                    }
+                    
                     return true;
                 } catch (error) {
                     console.error(`❌ Error adding ${roleName} role to ${user.username}:`, error.message);
                     console.error(`❌ Error code: ${error.code}, Error details:`, error);
+                    
+                    // Check for specific Discord error codes
+                    if (error.code === 50013) {
+                        console.error(`❌ Missing Permissions: Bot doesn't have permission to manage roles`);
+                    } else if (error.code === 50035) {
+                        console.error(`❌ Invalid Form Body: Role hierarchy issue`);
+                    }
+                    
                     return false;
                 }
             };
