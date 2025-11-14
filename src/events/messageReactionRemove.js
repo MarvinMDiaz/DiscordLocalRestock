@@ -83,6 +83,8 @@ module.exports = {
             // Get emoji name - handle both unicode and custom emojis
             const emoji = reaction.emoji.name || reaction.emoji.identifier;
             
+            console.log(`📋 Processing reaction remove - Emoji: ${emoji}, User: ${user.username} (${user.id})`);
+            
             // Double-check we're on the right message
             if (reaction.message.id !== targetMessageId) {
                 console.log(`⚠️ Reaction remove on wrong message: ${reaction.message.id} (expected ${targetMessageId})`);
@@ -96,6 +98,7 @@ module.exports = {
             const weeklyMdRoleId = config.roles.weeklyReportMD;
 
             console.log(`🔔 Reaction removed: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
+            console.log(`📋 Role IDs - VA: ${vaRoleId}, MD: ${mdRoleId}, Weekly VA: ${weeklyVaRoleId}, Weekly MD: ${weeklyMdRoleId}`);
 
             // Helper function to remove role with proper checks
             const removeRole = async (roleId, roleName) => {
@@ -111,39 +114,58 @@ module.exports = {
                 // Refresh member to get latest role state
                 try {
                     member = await guild.members.fetch(user.id);
+                    console.log(`🔄 Refreshed member ${user.username} - Current roles: ${member.roles.cache.map(r => r.name).join(', ')}`);
                 } catch (error) {
                     console.error(`❌ Error refreshing member ${user.username}:`, error.message);
                     return false;
                 }
 
                 // Check if user has the role
-                if (!member.roles.cache.has(roleId)) {
-                    console.log(`ℹ️ User ${user.username} doesn't have ${roleName} role`);
+                const hasRole = member.roles.cache.has(roleId);
+                console.log(`🔍 User ${user.username} has ${roleName} role (${roleId}): ${hasRole}`);
+                
+                if (!hasRole) {
+                    console.log(`ℹ️ User ${user.username} doesn't have ${roleName} role - nothing to remove`);
                     return true;
                 }
 
                 // Note: By the time this event fires, Discord has already removed the reaction
                 // So we can trust the event and proceed with role removal
 
+                console.log(`🗑️ Attempting to remove ${roleName} role (${roleId}) from ${user.username}...`);
                 try {
                     await member.roles.remove(role);
-                    console.log(`✅ Removed ${roleName} role from ${user.username} (${user.id})`);
+                    console.log(`✅ Successfully removed ${roleName} role from ${user.username} (${user.id})`);
+                    
+                    // Verify removal
+                    await member.fetch(true);
+                    const stillHasRole = member.roles.cache.has(roleId);
+                    console.log(`🔍 Verification - User ${user.username} still has ${roleName} role: ${stillHasRole}`);
+                    
                     return true;
                 } catch (error) {
                     console.error(`❌ Error removing ${roleName} role from ${user.username}:`, error.message);
+                    console.error(`❌ Error code: ${error.code}, Error details:`, error);
                     return false;
                 }
             };
 
             // Handle different reactions
+            console.log(`🔍 Checking emoji: "${emoji}"`);
             if (emoji === '🚨') {
+                console.log(`✅ Matched 🚨 - Removing VA Alerts role`);
                 await removeRole(vaRoleId, 'VA Alerts');
             } else if (emoji === '📋') {
+                console.log(`✅ Matched 📋 - Removing MD Alerts role`);
                 await removeRole(mdRoleId, 'MD Alerts');
             } else if (emoji === '📅') {
+                console.log(`✅ Matched 📅 - Removing Weekly VA Recap role`);
                 await removeRole(weeklyVaRoleId, 'Weekly VA Recap');
             } else if (emoji === '📊') {
+                console.log(`✅ Matched 📊 - Removing Weekly MD Recap role`);
                 await removeRole(weeklyMdRoleId, 'Weekly MD Recap');
+            } else {
+                console.log(`⚠️ Unhandled emoji for removal: "${emoji}"`);
             }
         } catch (error) {
             console.error('❌ Error handling reaction remove:', error);

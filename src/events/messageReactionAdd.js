@@ -89,6 +89,7 @@ module.exports = {
             const weeklyMdRoleId = config.roles.weeklyReportMD;
 
             console.log(`🔔 Reaction detected: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
+            console.log(`📋 Role IDs - VA: ${vaRoleId}, MD: ${mdRoleId}, Weekly VA: ${weeklyVaRoleId}, Weekly MD: ${weeklyMdRoleId}`);
 
             // Helper function to add role with proper checks
             const addRole = async (roleId, roleName) => {
@@ -112,32 +113,48 @@ module.exports = {
                 }
 
                 // Check if user already has the role
-                if (member.roles.cache.has(roleId)) {
-                    console.log(`ℹ️ User ${user.username} already has ${roleName} role`);
+                const hasRole = member.roles.cache.has(roleId);
+                console.log(`🔍 User ${user.username} has ${roleName} role (${roleId}): ${hasRole}`);
+                
+                if (hasRole) {
+                    console.log(`ℹ️ User ${user.username} already has ${roleName} role - skipping`);
                     return true;
                 }
 
+                console.log(`➕ Attempting to add ${roleName} role (${roleId}) to ${user.username}...`);
                 try {
                     await member.roles.add(role);
-                    console.log(`✅ Added ${roleName} role to ${user.username}`);
+                    console.log(`✅ Successfully added ${roleName} role to ${user.username}`);
+                    
+                    // Verify addition
+                    await member.fetch(true);
+                    const nowHasRole = member.roles.cache.has(roleId);
+                    console.log(`🔍 Verification - User ${user.username} now has ${roleName} role: ${nowHasRole}`);
+                    
                     return true;
                 } catch (error) {
                     console.error(`❌ Error adding ${roleName} role to ${user.username}:`, error.message);
+                    console.error(`❌ Error code: ${error.code}, Error details:`, error);
                     return false;
                 }
             };
 
             // Handle different reactions
+            console.log(`🔍 Checking emoji: "${emoji}"`);
             if (emoji === '🚨') {
+                console.log(`✅ Matched 🚨 - Adding VA Alerts role`);
                 await addRole(vaRoleId, 'VA Alerts');
             } else if (emoji === '📋') {
+                console.log(`✅ Matched 📋 - Adding MD Alerts role`);
                 await addRole(mdRoleId, 'MD Alerts');
             } else if (emoji === '📅') {
+                console.log(`✅ Matched 📅 - Adding Weekly VA Recap role`);
                 await addRole(weeklyVaRoleId, 'Weekly VA Recap');
             } else if (emoji === '📊') {
+                console.log(`✅ Matched 📊 - Adding Weekly MD Recap role`);
                 await addRole(weeklyMdRoleId, 'Weekly MD Recap');
             } else {
-                console.log(`⚠️ Unhandled emoji reaction: ${emoji}`);
+                console.log(`⚠️ Unhandled emoji reaction: "${emoji}"`);
             }
         } catch (error) {
             console.error('❌ Error handling reaction add:', error);
