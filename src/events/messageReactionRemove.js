@@ -4,8 +4,13 @@ const config = require('../../config/config.json');
 module.exports = {
     name: Events.MessageReactionRemove,
     async execute(reaction, user) {
+        console.log(`🔔 MessageReactionRemove event fired - User: ${user.username} (${user.id}), Bot: ${user.bot}`);
+        
         // Ignore bot reactions
-        if (user.bot) return;
+        if (user.bot) {
+            console.log(`⚠️ Ignoring bot reaction removal from ${user.username}`);
+            return;
+        }
 
         // Fetch the reaction if it's partial
         if (reaction.partial) {
@@ -31,8 +36,22 @@ module.exports = {
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
         const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
         
-        if (reaction.message.channelId !== targetChannelId) return;
-        if (reaction.message.id !== targetMessageId) return;
+        // Convert to strings for comparison (Discord IDs can be strings or BigInt)
+        const messageChannelId = String(reaction.message.channelId);
+        const messageId = String(reaction.message.id);
+        
+        console.log(`🔍 Reaction remove check - Channel: ${messageChannelId} (expected: ${targetChannelId}), Message: ${messageId} (expected: ${targetMessageId})`);
+        
+        if (messageChannelId !== String(targetChannelId)) {
+            console.log(`⚠️ Reaction remove on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
+            return;
+        }
+        if (messageId !== String(targetMessageId)) {
+            console.log(`⚠️ Reaction remove on wrong message: ${messageId} !== ${targetMessageId}`);
+            return;
+        }
+        
+        console.log(`✅ Reaction remove matches target message! Processing...`);
 
         const guild = reaction.message.guild;
         if (!guild) {

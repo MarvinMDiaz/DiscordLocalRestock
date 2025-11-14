@@ -31,8 +31,22 @@ module.exports = {
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
         const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
         
-        if (reaction.message.channelId !== targetChannelId) return;
-        if (reaction.message.id !== targetMessageId) return;
+        // Convert to strings for comparison (Discord IDs can be strings or BigInt)
+        const messageChannelId = String(reaction.message.channelId);
+        const messageId = String(reaction.message.id);
+        
+        console.log(`🔍 Reaction check - Channel: ${messageChannelId} (expected: ${targetChannelId}), Message: ${messageId} (expected: ${targetMessageId})`);
+        
+        if (messageChannelId !== String(targetChannelId)) {
+            console.log(`⚠️ Reaction on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
+            return;
+        }
+        if (messageId !== String(targetMessageId)) {
+            console.log(`⚠️ Reaction on wrong message: ${messageId} !== ${targetMessageId}`);
+            return;
+        }
+        
+        console.log(`✅ Reaction matches target message! Processing...`);
 
         const guild = reaction.message.guild;
         if (!guild) {
