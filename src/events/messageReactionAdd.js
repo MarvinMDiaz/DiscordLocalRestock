@@ -4,7 +4,13 @@ const config = require('../../config/config.json');
 module.exports = {
     name: Events.MessageReactionAdd,
     async execute(reaction, user) {
-        console.log(`🔔 MessageReactionAdd event fired - User: ${user.username} (${user.id}), Bot: ${user.bot}`);
+        console.log(`\n🔔 ========== MessageReactionAdd EVENT FIRED ==========`);
+        console.log(`👤 User: ${user.username} (${user.id})`);
+        console.log(`🤖 Is Bot: ${user.bot}`);
+        console.log(`😀 Emoji: ${reaction.emoji.name || reaction.emoji.identifier || 'unknown'}`);
+        console.log(`📝 Message ID: ${reaction.message.id || 'unknown'}`);
+        console.log(`📝 Message Partial: ${reaction.message.partial}`);
+        console.log(`📝 Channel ID: ${reaction.message.channelId || 'unknown'}`);
         
         // Ignore bot reactions
         if (user.bot) {
@@ -12,35 +18,38 @@ module.exports = {
             return;
         }
 
-        // Fetch the reaction if it's partial
-        if (reaction.partial) {
-            try {
-                await reaction.fetch();
-            } catch (error) {
-                console.error('❌ Error fetching reaction:', error);
-                return;
-            }
-        }
-
-        // Fetch the message if it's partial (for reactions on old messages)
-        if (reaction.message.partial) {
-            try {
+        // Always fetch the message to ensure we have the latest data
+        try {
+            if (reaction.message.partial) {
+                console.log(`📥 Fetching partial message...`);
                 await reaction.message.fetch();
-            } catch (error) {
-                console.error('❌ Error fetching message:', error);
-                return;
             }
+            if (reaction.partial) {
+                console.log(`📥 Fetching partial reaction...`);
+                await reaction.fetch();
+            }
+        } catch (error) {
+            console.error('❌ Error fetching reaction/message:', error);
+            return;
         }
 
         // Only handle reactions on the specific reaction role message
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
         const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
         
+        console.log(`\n📋 Config Check:`);
+        console.log(`   Target Channel: ${targetChannelId}`);
+        console.log(`   Target Message: ${targetMessageId}`);
+        
         // Convert to strings for comparison (Discord IDs can be strings or BigInt)
         const messageChannelId = String(reaction.message.channelId);
         const messageId = String(reaction.message.id);
         
-        console.log(`🔍 Reaction check - Channel: ${messageChannelId} (expected: ${targetChannelId}), Message: ${messageId} (expected: ${targetMessageId})`);
+        console.log(`\n🔍 Reaction Check:`);
+        console.log(`   Actual Channel: ${messageChannelId}`);
+        console.log(`   Actual Message: ${messageId}`);
+        console.log(`   Channel Match: ${messageChannelId === String(targetChannelId)}`);
+        console.log(`   Message Match: ${messageId === String(targetMessageId)}`);
         
         if (messageChannelId !== String(targetChannelId)) {
             console.log(`⚠️ Reaction on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
@@ -51,7 +60,7 @@ module.exports = {
             return;
         }
         
-        console.log(`✅ Reaction matches target message! Processing...`);
+        console.log(`\n✅ ✅ ✅ MATCH FOUND! Processing reaction role assignment... ✅ ✅ ✅\n`);
 
         const guild = reaction.message.guild;
         if (!guild) {
