@@ -4,8 +4,13 @@ const config = require('../../config/config.json');
 module.exports = {
     name: Events.MessageReactionAdd,
     async execute(reaction, user) {
+        console.log(`🔔 MessageReactionAdd event fired - User: ${user.username} (${user.id}), Bot: ${user.bot}`);
+        
         // Ignore bot reactions
-        if (user.bot) return;
+        if (user.bot) {
+            console.log(`⚠️ Ignoring bot reaction from ${user.username}`);
+            return;
+        }
 
         // Fetch the reaction if it's partial
         if (reaction.partial) {
