@@ -388,21 +388,8 @@ async function processShadowRealmSend(interaction, selectedUser, reason = null) 
             });
         }
 
-        // Send notification to Shadow Realm notifications channel
-        const shadowRealmNotificationsChannelId = config.channels.shadowRealmNotifications || '1435751467972558928';
-        if (shadowRealmNotificationsChannelId) {
-            try {
-                const notificationsChannel = await guild.channels.fetch(shadowRealmNotificationsChannelId);
-                if (notificationsChannel) {
-                    const notificationMessage = `🔮 **${selectedUser.username}** has been sent to the shadow realm.\n\nIf you want to return to society, create a ticket as to why.${reason ? `\n\n**Reason:** ${reason}` : ''}`;
-                    await notificationsChannel.send({
-                        content: notificationMessage
-                    });
-                }
-            } catch (error) {
-                console.error('❌ Error sending notification to Shadow Realm notifications channel:', error);
-            }
-        }
+        // Notification to Shadow Realm notifications channel disabled per request
+        // (Previously sent notifications but was causing unwanted warnings/alerts)
     } catch (error) {
         console.error('❌ Error processing shadow realm send:', error);
         if (interaction.deferred) {
