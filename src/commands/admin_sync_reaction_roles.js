@@ -22,7 +22,17 @@ module.exports = {
 
         try {
             // Fetch the message
-            const message = await channel.messages.fetch(messageId);
+            let message;
+            try {
+                message = await channel.messages.fetch(messageId);
+            } catch (error) {
+                if (error.code === 10008 || error.status === 404) {
+                    return await interaction.editReply({
+                        content: `❌ **Message not found!**\n\nThe message ID \`${messageId}\` doesn't exist in channel <#${channelId}>.\n\n**Solution:** Use \`/admin_setup_reaction_roles\` to create a new reaction role message, or update the message ID in config to point to an existing message.`
+                    });
+                }
+                throw error;
+            }
             
             if (!message) {
                 return await interaction.editReply({
