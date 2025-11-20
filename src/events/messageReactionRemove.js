@@ -95,9 +95,19 @@ module.exports = {
             }
 
             // Get emoji name - handle both unicode and custom emojis
-            const emoji = reaction.emoji.name || reaction.emoji.identifier;
+            // Discord emoji codes: :rotating_light: = 🚨, :clipboard: = 📋, :date: = 📅, :bar_chart: = 📊
+            const emojiName = reaction.emoji.name;
+            const emojiId = reaction.emoji.id;
+            const emojiIdentifier = reaction.emoji.identifier;
+            const emojiString = reaction.emoji.toString();
             
-            console.log(`📋 Processing reaction remove - Emoji: ${emoji}, User: ${user.username} (${user.id})`);
+            console.log(`\n🔍 EMOJI DEBUG INFO (REMOVE):`);
+            console.log(`   emoji.name: "${emojiName}"`);
+            console.log(`   emoji.id: "${emojiId}"`);
+            console.log(`   emoji.identifier: "${emojiIdentifier}"`);
+            console.log(`   emoji.toString(): "${emojiString}"`);
+            
+            console.log(`📋 Processing reaction remove - Emoji: name="${emojiName}", User: ${user.username} (${user.id})`);
             
             // Double-check we're on the right message
             if (reaction.message.id !== targetMessageId) {
@@ -111,7 +121,7 @@ module.exports = {
             const weeklyVaRoleId = config.roles.weeklyReportVA;
             const weeklyMdRoleId = config.roles.weeklyReportMD;
 
-            console.log(`🔔 Reaction removed: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
+            console.log(`🔔 Reaction removed from ${user.username} (${user.id}) on message ${reaction.message.id}`);
             console.log(`📋 Role IDs - VA: ${vaRoleId}, MD: ${mdRoleId}, Weekly VA: ${weeklyVaRoleId}, Weekly MD: ${weeklyMdRoleId}`);
 
             // Helper function to remove role with proper checks
@@ -199,21 +209,30 @@ module.exports = {
             };
 
             // Handle different reactions
-            console.log(`🔍 Checking emoji: "${emoji}"`);
-            if (emoji === '💥') {
-                console.log(`✅ Matched 💥 - Removing VA Alerts role`);
+            // Match by emoji name (Discord emoji codes: rotating_light, clipboard, date, bar_chart)
+            // Also match by unicode emoji characters
+            console.log(`🔍 Checking emoji: name="${emojiName}", id="${emojiId}", string="${emojiString}"`);
+            
+            const isVARole = emojiName === 'rotating_light' || emojiName === '🚨' || emojiString === '🚨' || emojiString.includes('rotating_light');
+            const isMDRole = emojiName === 'clipboard' || emojiName === '📋' || emojiString === '📋' || emojiString.includes('clipboard');
+            const isWeeklyVARole = emojiName === 'date' || emojiName === '📅' || emojiString === '📅' || emojiString.includes('date');
+            const isWeeklyMDRole = emojiName === 'bar_chart' || emojiName === '📊' || emojiString === '📊' || emojiString.includes('bar_chart');
+            
+            if (isVARole) {
+                console.log(`✅ Matched 🚨 (rotating_light) - Removing VA Alerts role`);
                 await removeRole(vaRoleId, 'VA Alerts');
-            } else if (emoji === '🗄️') {
-                console.log(`✅ Matched 🗄️ - Removing MD Alerts role`);
+            } else if (isMDRole) {
+                console.log(`✅ Matched 📋 (clipboard) - Removing MD Alerts role`);
                 await removeRole(mdRoleId, 'MD Alerts');
-            } else if (emoji === '📅') {
-                console.log(`✅ Matched 📅 - Removing Weekly VA Recap role`);
+            } else if (isWeeklyVARole) {
+                console.log(`✅ Matched 📅 (date) - Removing Weekly VA Recap role`);
                 await removeRole(weeklyVaRoleId, 'Weekly VA Recap');
-            } else if (emoji === '📊') {
-                console.log(`✅ Matched 📊 - Removing Weekly MD Recap role`);
+            } else if (isWeeklyMDRole) {
+                console.log(`✅ Matched 📊 (bar_chart) - Removing Weekly MD Recap role`);
                 await removeRole(weeklyMdRoleId, 'Weekly MD Recap');
             } else {
-                console.log(`⚠️ Unhandled emoji for removal: "${emoji}"`);
+                console.log(`⚠️ Unhandled emoji for removal: name="${emojiName}", string="${emojiString}"`);
+                console.log(`   Try matching with: rotating_light, clipboard, date, bar_chart`);
             }
         } catch (error) {
             console.error('❌ Error handling reaction remove:', error);

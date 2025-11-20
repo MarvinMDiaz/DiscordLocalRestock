@@ -66,10 +66,10 @@ module.exports = {
             // Check bot role position
             const botRole = botMember.roles.highest;
             const roles = [
-                { role: vaRole, emoji: '💥', name: 'VA Alerts' },
-                { role: mdRole, emoji: '🗄️', name: 'MD Alerts' },
-                { role: weeklyVaRole, emoji: '📅', name: 'Weekly VA Recap' },
-                { role: weeklyMdRole, emoji: '📊', name: 'Weekly MD Recap' }
+                { role: vaRole, emoji: '🚨', emojiName: 'rotating_light', name: 'VA Alerts' },
+                { role: mdRole, emoji: '📋', emojiName: 'clipboard', name: 'MD Alerts' },
+                { role: weeklyVaRole, emoji: '📅', emojiName: 'date', name: 'Weekly VA Recap' },
+                { role: weeklyMdRole, emoji: '📊', emojiName: 'bar_chart', name: 'Weekly MD Recap' }
             ];
 
             for (const roleInfo of roles) {
@@ -80,12 +80,16 @@ module.exports = {
                 }
             }
 
-            // Map emojis to roles
+            // Map emojis to roles - handle both unicode and Discord emoji names
             const emojiToRole = {
-                '💥': { role: vaRole, name: 'VA Alerts' },
-                '🗄️': { role: mdRole, name: 'MD Alerts' },
+                '🚨': { role: vaRole, name: 'VA Alerts' },
+                'rotating_light': { role: vaRole, name: 'VA Alerts' },
+                '📋': { role: mdRole, name: 'MD Alerts' },
+                'clipboard': { role: mdRole, name: 'MD Alerts' },
                 '📅': { role: weeklyVaRole, name: 'Weekly VA Recap' },
-                '📊': { role: weeklyMdRole, name: 'Weekly MD Recap' }
+                'date': { role: weeklyVaRole, name: 'Weekly VA Recap' },
+                '📊': { role: weeklyMdRole, name: 'Weekly MD Recap' },
+                'bar_chart': { role: weeklyMdRole, name: 'Weekly MD Recap' }
             };
 
             let synced = 0;
@@ -100,25 +104,31 @@ module.exports = {
             const allReactedUserIds = new Map(); // emoji -> Set of user IDs
 
             // Process each emoji reaction
-            for (const [emojiName, roleInfo] of Object.entries(emojiToRole)) {
-                // Try to get reaction from cache first
-                let reaction = message.reactions.cache.get(emojiName);
+            for (const [emojiKey, roleInfo] of Object.entries(emojiToRole)) {
+                // Try to get reaction from cache first - try both unicode and name
+                let reaction = message.reactions.cache.get(emojiKey);
                 
                 // If not found, try fetching all reactions and then getting it
                 if (!reaction) {
-                    console.log(`⚠️ Reaction ${emojiName} not in cache, fetching all reactions...`);
+                    console.log(`⚠️ Reaction ${emojiKey} not in cache, fetching all reactions...`);
                     try {
                         await message.reactions.fetch();
-                        reaction = message.reactions.cache.get(emojiName);
+                        // Try both the key and the unicode emoji
+                        reaction = message.reactions.cache.get(emojiKey);
+                        if (!reaction && roleInfo.emoji) {
+                            reaction = message.reactions.cache.get(roleInfo.emoji);
+                        }
                     } catch (error) {
                         console.error(`❌ Error fetching reactions:`, error);
                     }
                 }
                 
                 if (!reaction) {
-                    console.log(`⚠️ No reaction found for ${emojiName} after fetch`);
+                    console.log(`⚠️ No reaction found for ${emojiKey} after fetch`);
                     continue;
                 }
+                
+                console.log(`✅ Found reaction for ${emojiKey}: ${reaction.emoji.name || reaction.emoji.toString()}`);
                 
                 // Ensure reaction is fully fetched
                 if (reaction.partial) {
