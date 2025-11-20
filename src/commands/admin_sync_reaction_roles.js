@@ -66,8 +66,8 @@ module.exports = {
             // Check bot role position
             const botRole = botMember.roles.highest;
             const roles = [
-                { role: vaRole, emoji: '🚨', name: 'VA Alerts' },
-                { role: mdRole, emoji: '📋', name: 'MD Alerts' },
+                { role: vaRole, emoji: '💥', name: 'VA Alerts' },
+                { role: mdRole, emoji: '🗄️', name: 'MD Alerts' },
                 { role: weeklyVaRole, emoji: '📅', name: 'Weekly VA Recap' },
                 { role: weeklyMdRole, emoji: '📊', name: 'Weekly MD Recap' }
             ];
@@ -82,8 +82,8 @@ module.exports = {
 
             // Map emojis to roles
             const emojiToRole = {
-                '🚨': { role: vaRole, name: 'VA Alerts' },
-                '📋': { role: mdRole, name: 'MD Alerts' },
+                '💥': { role: vaRole, name: 'VA Alerts' },
+                '🗄️': { role: mdRole, name: 'MD Alerts' },
                 '📅': { role: weeklyVaRole, name: 'Weekly VA Recap' },
                 '📊': { role: weeklyMdRole, name: 'Weekly MD Recap' }
             };

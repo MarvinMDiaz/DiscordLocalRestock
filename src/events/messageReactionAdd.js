@@ -190,11 +190,11 @@ module.exports = {
 
             // Handle different reactions
             console.log(`🔍 Checking emoji: "${emoji}"`);
-            if (emoji === '🚨') {
-                console.log(`✅ Matched 🚨 - Adding VA Alerts role`);
+            if (emoji === '💥') {
+                console.log(`✅ Matched 💥 - Adding VA Alerts role`);
                 await addRole(vaRoleId, 'VA Alerts');
-            } else if (emoji === '📋') {
-                console.log(`✅ Matched 📋 - Adding MD Alerts role`);
+            } else if (emoji === '🗄️') {
+                console.log(`✅ Matched 🗄️ - Adding MD Alerts role`);
                 await addRole(mdRoleId, 'MD Alerts');
             } else if (emoji === '📅') {
                 console.log(`✅ Matched 📅 - Adding Weekly VA Recap role`);

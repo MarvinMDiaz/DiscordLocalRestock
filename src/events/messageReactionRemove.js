@@ -200,11 +200,11 @@ module.exports = {
 
             // Handle different reactions
             console.log(`🔍 Checking emoji: "${emoji}"`);
-            if (emoji === '🚨') {
-                console.log(`✅ Matched 🚨 - Removing VA Alerts role`);
+            if (emoji === '💥') {
+                console.log(`✅ Matched 💥 - Removing VA Alerts role`);
                 await removeRole(vaRoleId, 'VA Alerts');
-            } else if (emoji === '📋') {
-                console.log(`✅ Matched 📋 - Removing MD Alerts role`);
+            } else if (emoji === '🗄️') {
+                console.log(`✅ Matched 🗄️ - Removing MD Alerts role`);
                 await removeRole(mdRoleId, 'MD Alerts');
             } else if (emoji === '📅') {
                 console.log(`✅ Matched 📅 - Removing Weekly VA Recap role`);
