@@ -45,10 +45,12 @@ module.exports = {
         // Only handle reactions on the specific reaction role message
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
         const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
+        const testChannelId = '1351012855759114280'; // Test channel for debugging
         
         console.log(`\n📋 Config Check:`);
         console.log(`   Target Channel: ${targetChannelId}`);
         console.log(`   Target Message: ${targetMessageId}`);
+        console.log(`   Test Channel: ${testChannelId}`);
         
         // Convert to strings for comparison (Discord IDs can be strings or BigInt)
         const messageChannelId = String(reaction.message.channelId);
@@ -59,20 +61,27 @@ module.exports = {
         console.log(`   Actual Message: ${messageId}`);
         console.log(`   Channel Match: ${messageChannelId === String(targetChannelId)}`);
         console.log(`   Message Match: ${messageId === String(targetMessageId)}`);
+        console.log(`   Test Channel Match: ${messageChannelId === String(testChannelId)}`);
         
-        if (messageChannelId !== String(targetChannelId)) {
+        // Allow reactions in test channel OR on the target message
+        const isTestChannel = messageChannelId === String(testChannelId);
+        const isTargetChannel = messageChannelId === String(targetChannelId);
+        const isTargetMessage = messageId === String(targetMessageId);
+        
+        if (isTestChannel) {
+            console.log(`\n🧪 🧪 🧪 TEST CHANNEL DETECTED! Processing reaction role assignment... 🧪 🧪 🧪\n`);
+        } else if (!isTargetChannel) {
             console.log(`⚠️ Reaction on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
             console.log(`   (This reaction will be ignored - not on the reaction role message)`);
             return;
-        }
-        if (messageId !== String(targetMessageId)) {
+        } else if (!isTargetMessage) {
             console.log(`⚠️ Reaction on wrong message: ${messageId} !== ${targetMessageId}`);
             console.log(`   (This reaction will be ignored - not on the reaction role message)`);
             console.log(`   💡 Users need to react on message ID: ${targetMessageId}`);
             return;
+        } else {
+            console.log(`\n✅ ✅ ✅ MATCH FOUND! Processing reaction role assignment... ✅ ✅ ✅\n`);
         }
-        
-        console.log(`\n✅ ✅ ✅ MATCH FOUND! Processing reaction role assignment... ✅ ✅ ✅\n`);
 
         const guild = reaction.message.guild;
         if (!guild) {

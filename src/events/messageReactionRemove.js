@@ -49,23 +49,31 @@ module.exports = {
         // Only handle reactions on the specific reaction role message
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
         const targetMessageId = config.channels.reactionRoleMessageId || '1434620131002159176';
+        const testChannelId = '1351012855759114280'; // Test channel for debugging
         
         // Convert to strings for comparison (Discord IDs can be strings or BigInt)
         const messageChannelId = String(reaction.message.channelId);
         const messageId = String(reaction.message.id);
         
         console.log(`🔍 Reaction remove check - Channel: ${messageChannelId} (expected: ${targetChannelId}), Message: ${messageId} (expected: ${targetMessageId})`);
+        console.log(`   Test Channel: ${testChannelId}`);
         
-        if (messageChannelId !== String(targetChannelId)) {
+        // Allow reactions in test channel OR on the target message
+        const isTestChannel = messageChannelId === String(testChannelId);
+        const isTargetChannel = messageChannelId === String(targetChannelId);
+        const isTargetMessage = messageId === String(targetMessageId);
+        
+        if (isTestChannel) {
+            console.log(`🧪 TEST CHANNEL DETECTED! Processing reaction removal...`);
+        } else if (!isTargetChannel) {
             console.log(`⚠️ Reaction remove on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
             return;
-        }
-        if (messageId !== String(targetMessageId)) {
+        } else if (!isTargetMessage) {
             console.log(`⚠️ Reaction remove on wrong message: ${messageId} !== ${targetMessageId}`);
             return;
+        } else {
+            console.log(`✅ Reaction remove matches target message! Processing...`);
         }
-        
-        console.log(`✅ Reaction remove matches target message! Processing...`);
 
         const guild = reaction.message.guild;
         if (!guild) {
