@@ -1760,7 +1760,7 @@ async function handleLookupButtonClick(interaction, region) {
                     if (storeType === 'target' && displayName.toLowerCase().startsWith('target - ')) {
                         displayName = displayName.substring(9);
                     } else if (storeType === 'bestbuy' && displayName.toLowerCase().startsWith('best buy - ')) {
-                        displayName = displayName.substring(12);
+                        displayName = displayName.substring(11);
                     } else if (storeType === 'barnesandnoble' && displayName.toLowerCase().startsWith('barnes & noble - ')) {
                         displayName = displayName.substring(18);
                     }
