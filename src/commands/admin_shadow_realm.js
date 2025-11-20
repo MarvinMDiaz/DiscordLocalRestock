@@ -37,12 +37,14 @@ module.exports = {
     async execute(interaction) {
         try {
             const adminRoleId = config.roles.admin;
+            const shadowRealmModRoleId = '1378557248296587357';
             const member = interaction.member;
 
             const hasAdminRole = member.roles.cache.has(adminRoleId);
+            const hasShadowRealmModRole = member.roles.cache.has(shadowRealmModRoleId);
             const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
 
-            if (!hasAdminRole && !hasAdminPermission) {
+            if (!hasAdminRole && !hasShadowRealmModRole && !hasAdminPermission) {
                 return await interaction.reply({
                     content: '❌ **Access Denied**: You do not have permission to use this command.',
                     ephemeral: true
@@ -76,11 +78,13 @@ async function handleSendToShadowRealm(interaction) {
     // Check permissions for button interactions
     if (interaction.isButton()) {
         const adminRoleId = config.roles.admin;
+        const shadowRealmModRoleId = '1378557248296587357';
         const member = interaction.member;
         const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasShadowRealmModRole = member.roles.cache.has(shadowRealmModRoleId);
         const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
 
-        if (!hasAdminRole && !hasAdminPermission) {
+        if (!hasAdminRole && !hasShadowRealmModRole && !hasAdminPermission) {
             return await interaction.reply({
                 content: '❌ **Access Denied**: You do not have permission to use this.',
                 ephemeral: true
@@ -117,11 +121,13 @@ async function handleRestoreFromShadowRealm(interaction) {
     // Check permissions for button interactions
     if (interaction.isButton()) {
         const adminRoleId = config.roles.admin;
+        const shadowRealmModRoleId = '1378557248296587357';
         const member = interaction.member;
         const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasShadowRealmModRole = member.roles.cache.has(shadowRealmModRoleId);
         const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
 
-        if (!hasAdminRole && !hasAdminPermission) {
+        if (!hasAdminRole && !hasShadowRealmModRole && !hasAdminPermission) {
             return await interaction.reply({
                 content: '❌ **Access Denied**: You do not have permission to use this.',
                 ephemeral: true
@@ -159,11 +165,13 @@ async function handleShadowRealmStatus(interaction) {
     // Check permissions for button interactions
     if (interaction.isButton()) {
         const adminRoleId = config.roles.admin;
+        const shadowRealmModRoleId = '1378557248296587357';
         const member = interaction.member;
         const hasAdminRole = member.roles.cache.has(adminRoleId);
+        const hasShadowRealmModRole = member.roles.cache.has(shadowRealmModRoleId);
         const hasAdminPermission = member.permissions.has(PermissionFlagsBits.Administrator);
 
-        if (!hasAdminRole && !hasAdminPermission) {
+        if (!hasAdminRole && !hasShadowRealmModRole && !hasAdminPermission) {
             return await interaction.reply({
                 content: '❌ **Access Denied**: You do not have permission to use this.',
                 ephemeral: true
