@@ -219,12 +219,35 @@ module.exports = {
             // Handle different reactions
             // Match by emoji name (Discord emoji codes: rotating_light, clipboard, date, bar_chart)
             // Also match by unicode emoji characters
-            console.log(`🔍 Checking emoji: name="${emojiName}", id="${emojiId}", string="${emojiString}"`);
+            console.log(`🔍 Checking emoji for removal: name="${emojiName}", id="${emojiId}", string="${emojiString}"`);
+            console.log(`🔍 Emoji comparison - name type: ${typeof emojiName}, string type: ${typeof emojiString}`);
             
-            const isVARole = emojiName === 'rotating_light' || emojiName === '🚨' || emojiString === '🚨' || emojiString.includes('rotating_light');
-            const isMDRole = emojiName === 'clipboard' || emojiName === '📋' || emojiString === '📋' || emojiString.includes('clipboard');
-            const isWeeklyVARole = emojiName === 'date' || emojiName === '📅' || emojiString === '📅' || emojiString.includes('date');
-            const isWeeklyMDRole = emojiName === 'bar_chart' || emojiName === '📊' || emojiString === '📊' || emojiString.includes('bar_chart');
+            // More robust matching - check name first, then unicode, then identifier
+            const isVARole = emojiName === 'rotating_light' || 
+                            emojiName === '🚨' || 
+                            emojiString === '🚨' || 
+                            (emojiIdentifier && emojiIdentifier.includes('rotating_light')) ||
+                            (emojiString && emojiString.includes('rotating_light'));
+                            
+            const isMDRole = emojiName === 'clipboard' || 
+                            emojiName === '📋' || 
+                            emojiString === '📋' || 
+                            (emojiIdentifier && emojiIdentifier.includes('clipboard')) ||
+                            (emojiString && emojiString.includes('clipboard'));
+                            
+            const isWeeklyVARole = emojiName === 'date' || 
+                                  emojiName === '📅' || 
+                                  emojiString === '📅' || 
+                                  (emojiIdentifier && emojiIdentifier.includes('date')) ||
+                                  (emojiString && emojiString.includes('date'));
+                                  
+            const isWeeklyMDRole = emojiName === 'bar_chart' || 
+                                 emojiName === '📊' || 
+                                 emojiString === '📊' || 
+                                 (emojiIdentifier && emojiIdentifier.includes('bar_chart')) ||
+                                 (emojiString && emojiString.includes('bar_chart'));
+            
+            console.log(`🔍 Match results - VA: ${isVARole}, MD: ${isMDRole}, Weekly VA: ${isWeeklyVARole}, Weekly MD: ${isWeeklyMDRole}`);
             
             if (isVARole) {
                 console.log(`✅ Matched 🚨 (rotating_light) - Removing VA Alerts role`);
@@ -239,8 +262,14 @@ module.exports = {
                 console.log(`✅ Matched 📊 (bar_chart) - Removing Weekly MD Recap role`);
                 await removeRole(weeklyMdRoleId, 'Weekly MD Recap');
             } else {
-                console.log(`⚠️ Unhandled emoji for removal: name="${emojiName}", string="${emojiString}"`);
+                console.log(`⚠️ Unhandled emoji for removal: name="${emojiName}", string="${emojiString}", identifier="${emojiIdentifier}"`);
                 console.log(`   Try matching with: rotating_light, clipboard, date, bar_chart`);
+                console.log(`   Raw emoji object:`, JSON.stringify({
+                    name: reaction.emoji.name,
+                    id: reaction.emoji.id,
+                    identifier: reaction.emoji.identifier,
+                    toString: reaction.emoji.toString()
+                }, null, 2));
             }
         } catch (error) {
             console.error('❌ Error handling reaction remove:', error);
