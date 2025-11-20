@@ -154,7 +154,8 @@ module.exports = {
                 week_start: weekStart.toISOString().split('T')[0],
                 created_at: now.toISOString(),
                 is_past_restock: true, // Flag to indicate this is a past restock (no alert)
-                restock_date_input: dateInput // Store original input for reference
+                restock_date_input: dateInput, // Store original input for reference
+                region: 'va'
             };
 
             // Save to database

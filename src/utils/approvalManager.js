@@ -272,10 +272,22 @@ async function handleApprovedRestock(restock, client) {
         };
         await dataManager.updateLastRestock(restock.store, lastRestockData);
 
-        // Send to public channel (determine VA or MD based on store location)
+        // Send to public channel (determine VA or MD based on region field or store location)
         const config = require('../../config/config.json');
-        const isMDStore = restock.store.includes(', MD');
-        const isVAStore = restock.store.includes(', VA');
+        
+        // Use region field if available, otherwise fall back to parsing store string
+        let isMDStore = false;
+        let isVAStore = false;
+        
+        if (restock.region) {
+            // Use stored region field (preferred method)
+            isMDStore = restock.region.toLowerCase() === 'md';
+            isVAStore = restock.region.toLowerCase() === 'va';
+        } else {
+            // Fallback: parse from store string for backwards compatibility
+            isMDStore = restock.store.includes(', MD');
+            isVAStore = restock.store.includes(', VA');
+        }
         
         const publicChannelId = isMDStore ? config.channels.localRestockMD : config.channels.localRestockVA;
         const roleId = isMDStore ? config.roles.localRestockMD : config.roles.localRestockVA;

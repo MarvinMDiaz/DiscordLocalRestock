@@ -18,7 +18,7 @@ module.exports = {
             return;
         }
 
-        // Always fetch the message to ensure we have the latest data
+        // Always fetch the message and reaction to ensure we have the latest data
         try {
             if (reaction.message.partial) {
                 console.log(`📥 Fetching partial message...`);
@@ -27,6 +27,15 @@ module.exports = {
             if (reaction.partial) {
                 console.log(`📥 Fetching partial reaction...`);
                 await reaction.fetch();
+            }
+            
+            // Ensure we have the guild
+            if (!reaction.message.guild) {
+                console.log(`⚠️ Message has no guild, fetching...`);
+                const channel = await reaction.client.channels.fetch(reaction.message.channelId).catch(() => null);
+                if (channel && channel.guild) {
+                    reaction.message.guild = channel.guild;
+                }
             }
         } catch (error) {
             console.error('❌ Error fetching reaction/message:', error);
@@ -89,7 +98,13 @@ module.exports = {
                 throw error;
             }
 
-            const emoji = reaction.emoji.name;
+            // Get emoji name - handle both unicode and custom emojis
+            const emoji = reaction.emoji.name || reaction.emoji.identifier;
+            
+            if (!emoji) {
+                console.error(`❌ Could not determine emoji name/identifier`);
+                return;
+            }
 
             // Get role IDs from config
             const vaRoleId = config.roles.localRestockVA;
@@ -99,6 +114,7 @@ module.exports = {
 
             console.log(`🔔 Reaction detected: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
             console.log(`📋 Role IDs - VA: ${vaRoleId}, MD: ${mdRoleId}, Weekly VA: ${weeklyVaRoleId}, Weekly MD: ${weeklyMdRoleId}`);
+            console.log(`📋 Emoji details - name: ${reaction.emoji.name}, identifier: ${reaction.emoji.identifier}, id: ${reaction.emoji.id}`);
 
             // Helper function to add role with proper checks
             const addRole = async (roleId, roleName) => {

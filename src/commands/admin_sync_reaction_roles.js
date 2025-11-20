@@ -101,10 +101,33 @@ module.exports = {
 
             // Process each emoji reaction
             for (const [emojiName, roleInfo] of Object.entries(emojiToRole)) {
-                const reaction = message.reactions.cache.get(emojiName);
+                // Try to get reaction from cache first
+                let reaction = message.reactions.cache.get(emojiName);
+                
+                // If not found, try fetching all reactions and then getting it
                 if (!reaction) {
-                    console.log(`⚠️ No reaction found for ${emojiName}`);
+                    console.log(`⚠️ Reaction ${emojiName} not in cache, fetching all reactions...`);
+                    try {
+                        await message.reactions.fetch();
+                        reaction = message.reactions.cache.get(emojiName);
+                    } catch (error) {
+                        console.error(`❌ Error fetching reactions:`, error);
+                    }
+                }
+                
+                if (!reaction) {
+                    console.log(`⚠️ No reaction found for ${emojiName} after fetch`);
                     continue;
+                }
+                
+                // Ensure reaction is fully fetched
+                if (reaction.partial) {
+                    try {
+                        await reaction.fetch();
+                    } catch (error) {
+                        console.error(`❌ Error fetching reaction ${emojiName}:`, error);
+                        continue;
+                    }
                 }
 
                 // Fetch ALL users who reacted
@@ -187,14 +210,33 @@ module.exports = {
                             continue;
                         }
                         
+                        // Refresh member to ensure we have latest role state
+                        await member.fetch(true);
+                        
                         const hasRole = member.roles.cache.has(roleInfo.role.id);
 
                         if (!hasRole) {
                             // User reacted but doesn't have the role - add it
-                            await member.roles.add(roleInfo.role);
-                            results.added.push(`${user.username} (${user.id}) - ${roleInfo.name}`);
-                            synced++;
-                            console.log(`✅ Added ${roleInfo.name} role to ${user.username}`);
+                            try {
+                                await member.roles.add(roleInfo.role);
+                                
+                                // Verify addition
+                                await member.fetch(true);
+                                const nowHasRole = member.roles.cache.has(roleInfo.role.id);
+                                
+                                if (nowHasRole) {
+                                    results.added.push(`${user.username} (${user.id}) - ${roleInfo.name}`);
+                                    synced++;
+                                    console.log(`✅ Added ${roleInfo.name} role to ${user.username}`);
+                                } else {
+                                    throw new Error('Role addition failed verification');
+                                }
+                            } catch (addError) {
+                                errors++;
+                                const errorMsg = `${user.username || userId} - ${roleInfo.name} (add): ${addError.message}`;
+                                results.errors.push(errorMsg);
+                                console.error(`❌ Error adding ${roleInfo.name} role to ${user.username || userId}:`, addError);
+                            }
                         }
                     } catch (error) {
                         errors++;
@@ -237,10 +279,27 @@ module.exports = {
                         // If member has role but didn't react, remove the role
                         if (!reactedUserIds.has(memberId)) {
                             try {
+                                // Refresh member to ensure we have latest role state
+                                await member.fetch(true);
+                                
+                                // Double-check they still have the role
+                                if (!member.roles.cache.has(roleInfo.role.id)) {
+                                    continue; // Already removed
+                                }
+                                
                                 await member.roles.remove(roleInfo.role);
-                                results.removed.push(`${member.user.username} (${memberId}) - ${roleInfo.name}`);
-                                synced++;
-                                console.log(`✅ Removed ${roleInfo.name} role from ${member.user.username} (no reaction)`);
+                                
+                                // Verify removal
+                                await member.fetch(true);
+                                const stillHasRole = member.roles.cache.has(roleInfo.role.id);
+                                
+                                if (!stillHasRole) {
+                                    results.removed.push(`${member.user.username} (${memberId}) - ${roleInfo.name}`);
+                                    synced++;
+                                    console.log(`✅ Removed ${roleInfo.name} role from ${member.user.username} (no reaction)`);
+                                } else {
+                                    throw new Error('Role removal failed verification');
+                                }
                             } catch (error) {
                                 errors++;
                                 results.errors.push(`${member.user.username} - ${roleInfo.name} removal: ${error.message}`);

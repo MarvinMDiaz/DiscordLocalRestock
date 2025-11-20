@@ -654,7 +654,8 @@ async function processPastRestockSubmission(interaction, region, store, storeTyp
             created_at: now.toISOString(),
             is_past_restock: true,
             restock_date_input: dateInput,
-            source: 'button'
+            source: 'button',
+            region: region
         };
 
         await dataManager.addRestock(restockReport);
@@ -1263,7 +1264,8 @@ async function processUpcomingRestockSubmission(interaction, region, store, stor
             created_at: now.toISOString(),
             is_upcoming_restock: true,
             restock_date_input: dateInput,
-            source: 'button'
+            source: 'button',
+            region: region
         };
 
         await dataManager.addRestock(restockReport);
@@ -2812,7 +2814,8 @@ async function handleConfirmInProgress(interaction, region) {
             week_start: weekStart.toISOString().split('T')[0],
             created_at: now.toISOString(),
             type: 'in_progress',
-            source: 'button'
+            source: 'button',
+            region: region
         };
 
         await dataManager.addRestock(restockReport);

@@ -111,7 +111,8 @@ module.exports = {
                 status: 'pending',
                 week_start: weekStart.toISOString().split('T')[0],
                 created_at: now.toISOString(),
-                type: 'in_progress'
+                type: 'in_progress',
+                region: 'md'
             };
 
             await dataManager.addRestock(restockReport);

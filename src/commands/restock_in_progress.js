@@ -117,7 +117,8 @@ module.exports = {
                 status: 'pending',
                 week_start: weekStart.toISOString().split('T')[0],
                 created_at: now.toISOString(),
-                type: 'in_progress' // Add type flag
+                type: 'in_progress', // Add type flag
+                region: 'va'
             };
 
             // Save to database

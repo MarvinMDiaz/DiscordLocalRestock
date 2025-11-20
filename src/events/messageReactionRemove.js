@@ -31,6 +31,20 @@ module.exports = {
                 return;
             }
         }
+        
+        // Ensure we have the guild
+        if (!reaction.message.guild) {
+            try {
+                console.log(`⚠️ Message has no guild, fetching...`);
+                const channel = await reaction.client.channels.fetch(reaction.message.channelId).catch(() => null);
+                if (channel && channel.guild) {
+                    reaction.message.guild = channel.guild;
+                }
+            } catch (error) {
+                console.error('❌ Error fetching guild:', error);
+                return;
+            }
+        }
 
         // Only handle reactions on the specific reaction role message
         const targetChannelId = config.channels.reactionRoles || '1381823226493272094';
