@@ -62,10 +62,13 @@ module.exports = {
         
         if (messageChannelId !== String(targetChannelId)) {
             console.log(`⚠️ Reaction on wrong channel: ${messageChannelId} !== ${targetChannelId}`);
+            console.log(`   (This reaction will be ignored - not on the reaction role message)`);
             return;
         }
         if (messageId !== String(targetMessageId)) {
             console.log(`⚠️ Reaction on wrong message: ${messageId} !== ${targetMessageId}`);
+            console.log(`   (This reaction will be ignored - not on the reaction role message)`);
+            console.log(`   💡 Users need to react on message ID: ${targetMessageId}`);
             return;
         }
         
@@ -99,9 +102,20 @@ module.exports = {
             }
 
             // Get emoji name - handle both unicode and custom emojis
-            const emoji = reaction.emoji.name || reaction.emoji.identifier;
+            // Discord emoji codes: :rotating_light: = 🚨, :clipboard: = 📋, :date: = 📅, :bar_chart: = 📊
+            const emojiName = reaction.emoji.name;
+            const emojiId = reaction.emoji.id;
+            const emojiIdentifier = reaction.emoji.identifier;
+            const emojiString = reaction.emoji.toString();
             
-            if (!emoji) {
+            console.log(`\n🔍 EMOJI DEBUG INFO:`);
+            console.log(`   emoji.name: "${emojiName}"`);
+            console.log(`   emoji.id: "${emojiId}"`);
+            console.log(`   emoji.identifier: "${emojiIdentifier}"`);
+            console.log(`   emoji.toString(): "${emojiString}"`);
+            console.log(`   emoji.animated: ${reaction.emoji.animated}`);
+            
+            if (!emojiName && !emojiId) {
                 console.error(`❌ Could not determine emoji name/identifier`);
                 return;
             }
@@ -112,9 +126,8 @@ module.exports = {
             const weeklyVaRoleId = config.roles.weeklyReportVA;
             const weeklyMdRoleId = config.roles.weeklyReportMD;
 
-            console.log(`🔔 Reaction detected: ${emoji} from ${user.username} (${user.id}) on message ${reaction.message.id}`);
+            console.log(`🔔 Reaction detected from ${user.username} (${user.id}) on message ${reaction.message.id}`);
             console.log(`📋 Role IDs - VA: ${vaRoleId}, MD: ${mdRoleId}, Weekly VA: ${weeklyVaRoleId}, Weekly MD: ${weeklyMdRoleId}`);
-            console.log(`📋 Emoji details - name: ${reaction.emoji.name}, identifier: ${reaction.emoji.identifier}, id: ${reaction.emoji.id}`);
 
             // Helper function to add role with proper checks
             const addRole = async (roleId, roleName) => {
@@ -189,21 +202,30 @@ module.exports = {
             };
 
             // Handle different reactions
-            console.log(`🔍 Checking emoji: "${emoji}"`);
-            if (emoji === '💥') {
-                console.log(`✅ Matched 💥 - Adding VA Alerts role`);
+            // Match by emoji name (Discord emoji codes: rotating_light, clipboard, date, bar_chart)
+            // Also match by unicode emoji characters
+            console.log(`🔍 Checking emoji: name="${emojiName}", id="${emojiId}", string="${emojiString}"`);
+            
+            const isVARole = emojiName === 'rotating_light' || emojiName === '🚨' || emojiString === '🚨' || emojiString.includes('rotating_light');
+            const isMDRole = emojiName === 'clipboard' || emojiName === '📋' || emojiString === '📋' || emojiString.includes('clipboard');
+            const isWeeklyVARole = emojiName === 'date' || emojiName === '📅' || emojiString === '📅' || emojiString.includes('date');
+            const isWeeklyMDRole = emojiName === 'bar_chart' || emojiName === '📊' || emojiString === '📊' || emojiString.includes('bar_chart');
+            
+            if (isVARole) {
+                console.log(`✅ Matched 🚨 (rotating_light) - Adding VA Alerts role`);
                 await addRole(vaRoleId, 'VA Alerts');
-            } else if (emoji === '🗄️') {
-                console.log(`✅ Matched 🗄️ - Adding MD Alerts role`);
+            } else if (isMDRole) {
+                console.log(`✅ Matched 📋 (clipboard) - Adding MD Alerts role`);
                 await addRole(mdRoleId, 'MD Alerts');
-            } else if (emoji === '📅') {
-                console.log(`✅ Matched 📅 - Adding Weekly VA Recap role`);
+            } else if (isWeeklyVARole) {
+                console.log(`✅ Matched 📅 (date) - Adding Weekly VA Recap role`);
                 await addRole(weeklyVaRoleId, 'Weekly VA Recap');
-            } else if (emoji === '📊') {
-                console.log(`✅ Matched 📊 - Adding Weekly MD Recap role`);
+            } else if (isWeeklyMDRole) {
+                console.log(`✅ Matched 📊 (bar_chart) - Adding Weekly MD Recap role`);
                 await addRole(weeklyMdRoleId, 'Weekly MD Recap');
             } else {
-                console.log(`⚠️ Unhandled emoji reaction: "${emoji}"`);
+                console.log(`⚠️ Unhandled emoji reaction: name="${emojiName}", string="${emojiString}"`);
+                console.log(`   Try matching with: rotating_light, clipboard, date, bar_chart`);
             }
         } catch (error) {
             console.error('❌ Error handling reaction add:', error);
