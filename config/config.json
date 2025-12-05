@@ -125,7 +125,7 @@
         "Target - Canton (Baltimore) - 3559 Boston St, Baltimore, MD 21224"
       ]
     },
-    "bestbuy": {
+        "bestbuy": {
       "va": [
         "Best Buy - Alexandria - 3351 Richmond Hwy, Alexandria, VA 22305",
         "Best Buy - Baileys Crossroads - 5799 Leesburg Pike, Falls Church, VA 22041",
@@ -136,7 +136,8 @@
         "Best Buy - Tysons - 8449 Leesburg Pike, Vienna, VA 22182",
         "Best Buy - Woodbridge - 14001 Worth Ave, Woodbridge, VA 22192",
         "Best Buy - Leesburg - 609 Potomac Station Dr, Leesburg, VA 20176",
-        "Best Buy - Gainesville - 13093 Gateway Center Dr, Gainesville, VA 20155"
+        "Best Buy - Gainesville - 13093 Gateway Center Dr, Gainesville, VA 20155",
+        "Best Buy - Sterling - 45575 Dulles Eastern Plz, Sterling, VA 20166"
       ],
       "md": [
         "Best Buy - Wheaton - 10901 Georgia Ave, Wheaton, MD 20902",
