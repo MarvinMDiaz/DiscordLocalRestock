@@ -118,6 +118,7 @@
         "Target - Bel Air - 580 Marketplace Dr, Bel Air, MD 21014",
         "Target - Towson (York Road) - 1238 Putty Hill Ave, Towson, MD 21286",
         "Target - Towson (Cockeysville) - 9901 York Rd, Cockeysville, MD 21030",
+        "Target - Cockeysville - 9901 York Rd, Cockeysville, MD 21030",
         "Target - Pikesville - 1737 Reisterstown Rd, Pikesville, MD 21208",
         "Target - Westminster - 200 Malcolm Dr, Westminster, MD 21157",
         "Target - Middle River - 1330 Martin Blvd, Middle River, MD 21220",
@@ -150,7 +151,9 @@
         "Best Buy - Bel Air - 602 Boulton St, Bel Air, MD 21014",
         "Best Buy - Glen Burnie - 6722 Ritchie Hwy, Glen Burnie, MD 21061",
         "Best Buy - Lanham - 2300 Petrie Ln, Lanham, MD 20706",
-        "Best Buy - Hagerstown - 18053 Garland Groh Blvd, Hagerstown, MD 21740"
+        "Best Buy - Hagerstown - 18053 Garland Groh Blvd, Hagerstown, MD 21740",
+        "Best Buy - Cockeysville - 1717 York Rd, Lutherville, MD 21093",
+        "Best Buy - Owings Mills - 10400 Owings Mills Blvd, Owings Mills, MD 21117"
       ]
     },
     "barnesandnoble": {
