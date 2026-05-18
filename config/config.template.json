@@ -1,0 +1,60 @@
+{
+  "_comment": "Discord Bot Configuration Template",
+  "_instructions": "Copy this file to config.json and fill in your Discord server IDs",
+  "_how_to_get_ids": "Right-click channel/role > Copy ID (Enable Developer Mode in Discord settings)",
+  
+  "channels": {
+    "_comment": "Channel IDs for restock alerts and approvals",
+    "restockApprovals": "YOUR_APPROVAL_CHANNEL_ID_HERE",
+    "_comment2": "Set restockApprovalsMD to same as restockApprovals if you want all approvals in one channel",
+    "restockApprovalsMD": "YOUR_APPROVAL_CHANNEL_ID_HERE",
+    "localRestockVA": "YOUR_VA_ALERTS_CHANNEL_ID_HERE",
+    "localRestockMD": "YOUR_MD_ALERTS_CHANNEL_ID_HERE"
+  },
+  
+  "commandChannels": {
+    "_comment": "Channel IDs where specific commands can be used (leave empty string \"\" to allow anywhere)",
+    "_comment2": "If a command channel is set, the command will only work in that channel",
+    "report_restock_va": "YOUR_VA_REPORT_CHANNEL_ID_HERE",
+    "report_in_progress_va": "YOUR_VA_IN_PROGRESS_CHANNEL_ID_HERE",
+    "lookup_va_restocks": "YOUR_VA_LOOKUP_CHANNEL_ID_HERE",
+    "report_restock_md": "YOUR_MD_REPORT_CHANNEL_ID_HERE",
+    "restock_in_progress_md": "YOUR_MD_IN_PROGRESS_CHANNEL_ID_HERE",
+    "lookup_md_restocks": "YOUR_MD_LOOKUP_CHANNEL_ID_HERE"
+  },
+  
+  "channelNames": {
+    "_comment": "Friendly channel names for error messages (optional, uses IDs if not set)",
+    "_comment2": "Format: \"CHANNEL_ID\": \"#channel-name\"",
+    "YOUR_VA_REPORT_CHANNEL_ID_HERE": "#report-restock-va",
+    "YOUR_VA_LOOKUP_CHANNEL_ID_HERE": "#restock-status-lookup-va",
+    "YOUR_MD_REPORT_CHANNEL_ID_HERE": "#report-restock-md",
+    "YOUR_MD_LOOKUP_CHANNEL_ID_HERE": "#restock-status-lookup-md"
+  },
+  
+  "roles": {
+    "_comment": "Role IDs for mentions and permissions",
+    "localRestockVA": "YOUR_VA_ROLE_ID_HERE",
+    "localRestockMD": "YOUR_MD_ROLE_ID_HERE",
+    "admin": "YOUR_ADMIN_ROLE_ID_HERE"
+  },
+  
+  "stores": {
+    "_comment": "Store lists for each region",
+    "_comment2": "Format: \"Store Name - Address\" (address will be extracted automatically)",
+    "va": [
+      "Target - Store Name - Address, City, State ZIP"
+    ],
+    "md": [
+      "Target - Store Name - Address, City, State ZIP"
+    ]
+  },
+  
+  "settings": {
+    "_comment": "Bot settings",
+    "autoCleanupEnabled": true,
+    "cleanupDay": "monday",
+    "cleanupTime": "00:00"
+  }
+}
+

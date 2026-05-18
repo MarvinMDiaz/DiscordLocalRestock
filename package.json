@@ -1,0 +1,48 @@
+{
+  "name": "localrestockapp-discord",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "deploy": "node deploy-commands.js",
+    "provision:test": "node scripts/provision-test-server.js",
+    "provision:report-channels": "node scripts/ensure-report-channels.js",
+    "backfill:restock-history": "node scripts/backfill-restock-history-to-supabase.js",
+    "test:supabase-connection": "node scripts/test-restock-history-supabase-connection.js",
+    "delete:restock-history-row": "node scripts/delete-restock-history-by-message-id.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarvinMDiaz/DiscordLocalRestock.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MarvinMDiaz/DiscordLocalRestock/issues"
+  },
+  "homepage": "https://github.com/MarvinMDiaz/DiscordLocalRestock#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "data/**",
+      ".env",
+      ".git/**"
+    ],
+    "watch": [
+      "src/",
+      "deploy-commands.js"
+    ]
+  }
+}
