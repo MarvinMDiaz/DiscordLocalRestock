@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('dis
 const config = require('../../config/config.json');
 const dataManager = require('./dataManager');
 const buttonRestockHandler = require('./buttonRestockHandler');
+const nlLookupSupabase = require('./nlLookupSupabase');
 
 function nlReportChannelId() {
     return config.channels?.newlookReportRestocks || '';
@@ -296,6 +297,67 @@ async function handleNlLookupStorePick(interaction) {
     });
 }
 
+/**
+ * New Look lookup row: prefer Supabase `restock_history` when configured, else JSON `last_restocks`.
+ * @param {string} region
+ * @param {string} storeCanonical
+ * @returns {Promise<{ storeData: object, dataSource: 'db' | 'json' }>}
+ */
+async function resolveNlLookupStoreData(region, storeCanonical) {
+    if (nlLookupSupabase.shouldUseSupabaseForNlLookup()) {
+        try {
+            const row = await nlLookupSupabase.lookupSingleStoreFromDb(region, storeCanonical);
+            if (row) {
+                return { storeData: row, dataSource: 'db' };
+            }
+        } catch (err) {
+            console.warn('[nl_lookup] Remote lookup failed, using saved file data:', err.message || err);
+        }
+    }
+
+    const lastRestocks = dataManager.getLastRestocks();
+    const found = lastRestocks.find((s) => s.store === storeCanonical);
+    return { storeData: found || null, dataSource: 'json' };
+}
+
+/** Latest restock instant for New Look display (DB row or JSON last_restocks). */
+function nlLookupLastReportedIso(storeData, dataSource) {
+    if (!storeData) return null;
+    if (storeData.last_reported_restock_date) return storeData.last_reported_restock_date;
+    if (dataSource === 'db') return null;
+    const cur = storeData.current_week_restock_date;
+    const prev = storeData.previous_week_restock_date;
+    if (!cur && !prev) return null;
+    if (!cur) return prev;
+    if (!prev) return cur;
+    const dc = new Date(cur);
+    const dp = new Date(prev);
+    if (Number.isNaN(dc.getTime())) return prev;
+    if (Number.isNaN(dp.getTime())) return cur;
+    return dc >= dp ? cur : prev;
+}
+
+function nlLookupLastReportedDisplay(storeData, dataSource) {
+    const iso = nlLookupLastReportedIso(storeData, dataSource);
+    if (!iso) return 'No reported restock yet';
+    const d = formatNlDate(iso);
+    if (!d) return 'No reported restock yet';
+    return `${d} · ${nlTimeShort(iso)} · ${nlRelative(iso)}`;
+}
+
+function nlLookupEmptyMessage(dataSource) {
+    if (dataSource === 'db') {
+        return (
+            '📭 **No history found yet** for this store.\n' +
+            'After a restock is **approved**, the latest time will show here.'
+        );
+    }
+    return (
+        '📭 **No history found yet** for this store.\n' +
+        'Once an in-progress restock is **approved** for this store, it will show up here.'
+    );
+}
+
 function nlLookupDisplayShortName(fullStoreName, storeType) {
     let displayName = fullStoreName;
     const lower = displayName.toLowerCase();
@@ -373,18 +435,43 @@ async function handleNlLookupScopePick(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const lastRestocks = dataManager.getLastRestocks();
-    const chainRows = catalogStores.map((canonical) => {
-        const tracked = lastRestocks.find((r) => r.store === canonical);
-        return tracked
-            ? tracked
-            : {
-                  store: canonical,
-                  current_week_restock_date: null,
-                  previous_week_restock_date: null,
-                  last_checked_date: null
-              };
-    });
+    let chainRows;
+    let overviewSource = 'json';
+    if (nlLookupSupabase.shouldUseSupabaseForNlLookup()) {
+        try {
+            const dbMap = await nlLookupSupabase.lookupStoresBatchFromDb(region, catalogStores);
+            if (dbMap) {
+                overviewSource = 'db';
+                chainRows = catalogStores.map((canonical) => {
+                    const tracked = dbMap.get(canonical);
+                    return (
+                        tracked || {
+                            store: canonical,
+                            last_reported_restock_date: null,
+                            last_checked_date: null,
+                            approvalCount: 0
+                        }
+                    );
+                });
+            }
+        } catch (err) {
+            console.warn('[nl_lookup] Remote batch lookup failed, using saved file data:', err.message || err);
+        }
+    }
+    if (!chainRows) {
+        const lastRestocks = dataManager.getLastRestocks();
+        chainRows = catalogStores.map((canonical) => {
+            const tracked = lastRestocks.find((r) => r.store === canonical);
+            return tracked
+                ? tracked
+                : {
+                      store: canonical,
+                      last_reported_restock_date: null,
+                      last_checked_date: null,
+                      approvalCount: 0
+                  };
+        });
+    }
 
     const chainLabel = nlLookupChainLabel(storeType);
     const regionLabel = region === 'va' ? 'Virginia' : 'Maryland';
@@ -417,17 +504,11 @@ async function handleNlLookupScopePick(interaction) {
                     ? `📋 ${chainLabel} · ${regionLabel} (${idx + 1}/${fieldBatches.length})`
                     : `📋 ${chainLabel} · ${regionLabel} — all locations`
             )
-            .setDescription(`**${chainRows.length}** locations · current / previous week from tracked data`);
+            .setDescription(`**${chainRows.length}** locations · last reported restock`);
 
         batch.forEach((storeData) => {
             const displayName = nlLookupDisplayShortName(storeData.store, storeType);
-            const currentWeekDate = storeData.current_week_restock_date
-                ? formatNlDate(storeData.current_week_restock_date)
-                : 'Not Restocked';
-            const previousWeekDate = storeData.previous_week_restock_date
-                ? formatNlDate(storeData.previous_week_restock_date)
-                : 'N/A';
-            let value = `**Current:** ${currentWeekDate}\n**Previous:** ${previousWeekDate}`;
+            let value = `**Last reported restock:** ${nlLookupLastReportedDisplay(storeData, overviewSource)}`;
             if (storeData.last_checked_date) {
                 value += `\n**Last checked:** ${formatNlDate(storeData.last_checked_date)} · ${nlTimeShort(storeData.last_checked_date)} · ${nlRelative(storeData.last_checked_date)}`;
             }
@@ -469,22 +550,15 @@ async function handleNlLookupLocationPick(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const lastRestocks = dataManager.getLastRestocks();
-    const storeData = lastRestocks.find((s) => s.store === store);
+    const { storeData, dataSource } = await resolveNlLookupStoreData(region, store);
 
     if (!storeData) {
         return interaction.editReply({
-            content:
-                '📭 **No tracked restock data** for this location in `last_restocks` yet.\nOnce an in-progress restock is **approved** for this store, week data will appear here.'
+            content: nlLookupEmptyMessage('json')
         });
     }
 
-    const currentWeekDate = storeData.current_week_restock_date
-        ? formatNlDate(storeData.current_week_restock_date)
-        : 'Not Restocked';
-    const previousWeekDate = storeData.previous_week_restock_date
-        ? formatNlDate(storeData.previous_week_restock_date)
-        : 'N/A';
+    const lastReportedLine = nlLookupLastReportedDisplay(storeData, dataSource);
 
     let lastCheckedLine = '';
     if (storeData.last_checked_date) {
@@ -495,10 +569,7 @@ async function handleNlLookupLocationPick(interaction) {
         .setColor(region === 'md' ? 0xe74c3c : 0x3498db)
         .setTitle(`🔍 Restock lookup — ${region.toUpperCase()}`)
         .setDescription(store)
-        .addFields(
-            { name: 'Current week restock', value: currentWeekDate, inline: true },
-            { name: 'Previous week', value: previousWeekDate, inline: true }
-        )
+        .addFields({ name: 'Last reported restock', value: lastReportedLine, inline: false })
         .setFooter({
             text: `New Look lookup · Scheduled cleanup ${config.settings?.cleanupDay || 'Sunday'} (${config.settings?.cleanupTime || '00:00'})`
         });

@@ -1,4 +1,5 @@
 const {
+    AttachmentBuilder,
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
@@ -117,6 +118,40 @@ function removeProofPhotoMetadata(restock) {
 }
 
 /**
+ * Download proof image from the temporary Discord CDN URL, then package it for a new message.
+ * Embeds that use the raw `photo_url` break after the proof channel is deleted; re-uploading fixes that.
+ *
+ * @returns {Promise<{ attachment: import('discord.js').AttachmentBuilder, filename: string } | null>}
+ */
+async function buildProofPhotoReupload(photoUrl) {
+    if (!photoUrl || typeof photoUrl !== 'string') return null;
+    try {
+        const res = await fetch(photoUrl);
+        if (!res.ok) {
+            console.warn(`[PHOTO_PROOF] Download proof image failed: HTTP ${res.status}`);
+            return null;
+        }
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (!buf.length) return null;
+
+        let filename = 'proof.png';
+        try {
+            const pathname = new URL(photoUrl).pathname || '';
+            const seg = pathname.split('/').filter(Boolean).pop();
+            if (seg && /\.(jpe?g|png|webp|gif)$/i.test(seg)) filename = seg.slice(0, 90);
+        } catch (_) {
+            /* keep default */
+        }
+
+        const attachment = new AttachmentBuilder(buf, { name: filename });
+        return { attachment, filename };
+    } catch (e) {
+        console.warn('[PHOTO_PROOF] Could not download proof image for re-upload:', e.message || e);
+        return null;
+    }
+}
+
+/**
  * Optional escape hatch when the bot cannot thread.members.add (e.g. missing Manage Threads):
  * grant a role that can see the approvals channel, then retry the add.
  * WARNING: that role must be scoped (channel overrides only); otherwise the reporter sees every pending approval.
@@ -214,15 +249,21 @@ async function forwardProofPhotoToModeratorReviewThread(client, restock) {
               ? `<#${restock.approval_thread_id}>`
               : '—';
 
+        const built = await buildProofPhotoReupload(restock.photo_url);
+        if (!built) {
+            console.warn(`[PHOTO_PROOF] Mod mirror skipped (could not download image) for report ${restock.id}`);
+            return;
+        }
+
         const proofEmbed = new EmbedBuilder()
             .setColor(0x5865f2)
             .setTitle('📷 Proof photo (mirror)')
             .setDescription(
                 `**Reporter upload:** ${proofLocation}\n` + `**This moderator thread:** ${thread.url}\nReport ID: \`${restock.id}\``
             )
-            .setImage(restock.photo_url);
+            .setImage(`attachment://${built.filename}`);
 
-        await thread.send({ embeds: [proofEmbed] });
+        await thread.send({ embeds: [proofEmbed], files: [built.attachment] });
         console.log(`[PHOTO_PROOF] Mirrored proof to moderator review thread for report ${restock.id}`);
     } catch (err) {
         console.warn(
@@ -257,8 +298,7 @@ async function sendReporterReportSubmittedDm(client, { guildId, restock }) {
         await user.send({
             content:
                 `**Thanks for submitting your restock report.**\n\n` +
-                `**Store:** ${store}\n` +
-                `**Report ID:** \`${restock.id}\`\n\n` +
+                `**Store:** ${store}\n\n` +
                 uploadHelp
         });
     } catch (err) {
@@ -279,8 +319,7 @@ async function sendReporterReportApprovedDm(client, restock) {
         await user.send({
             content:
                 `**Congratulations — your restock report was approved.**\n\n` +
-                `**Store:** ${store}\n` +
-                `**Report ID:** \`${restock.id}\`\n\n` +
+                `**Store:** ${store}\n\n` +
                 `Your optional proof upload channel or thread has been closed. ` +
                 `If moderators chose to include a proof photo, it may appear in this server’s **public restock alert** and discussion thread.`
         });
@@ -725,12 +764,16 @@ async function postProofPhotoToAlertThread(thread, restock) {
     if (!thread || !restock?.photo_url) return;
     try {
         console.log(`[PHOTO_PROOF] Forwarding proof photo to public alert thread for report ${restock.id}`);
-        // Use embed image so Discord does not show the attachment filename link (raw URL in content unfurls that way).
+        const built = await buildProofPhotoReupload(restock.photo_url);
+        if (!built) {
+            console.warn(`[PHOTO_PROOF] Public thread proof skipped (could not download image) for report ${restock.id}`);
+            return;
+        }
         const proofEmbed = new EmbedBuilder()
             .setColor(0x2b2d31)
             .setDescription('Photo submitted with this report.')
-            .setImage(restock.photo_url);
-        await thread.send({ embeds: [proofEmbed] });
+            .setImage(`attachment://${built.filename}`);
+        await thread.send({ embeds: [proofEmbed], files: [built.attachment] });
         console.log(`[PHOTO_PROOF] Proof photo forwarded for report ${restock.id}`);
     } catch (err) {
         console.warn(`[PHOTO_PROOF] Could not forward proof photo for report ${restock.id}:`, err.message || err);

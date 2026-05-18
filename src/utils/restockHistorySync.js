@@ -77,4 +77,8 @@ async function syncRestockAlertToSupabase(alertMessage, restock, opts) {
     console.log(`[restock_history] Synced alert message ${alertMessage.id} → ${tbl}`);
 }
 
-module.exports = { syncRestockAlertToSupabase };
+module.exports = {
+    syncRestockAlertToSupabase,
+    getSupabaseClientIfConfigured: getClient,
+    getRestockHistoryTableName: tableName
+};
