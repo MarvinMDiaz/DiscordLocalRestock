@@ -435,105 +435,116 @@ async function handleNlLookupScopePick(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
 
-    let chainRows;
-    let overviewSource = 'json';
-    if (nlLookupSupabase.shouldUseSupabaseForNlLookup()) {
-        try {
-            const dbMap = await nlLookupSupabase.lookupStoresBatchFromDb(region, catalogStores);
-            if (dbMap) {
-                overviewSource = 'db';
-                chainRows = catalogStores.map((canonical) => {
-                    const tracked = dbMap.get(canonical);
-                    return (
-                        tracked || {
-                            store: canonical,
-                            last_reported_restock_date: null,
-                            last_checked_date: null,
-                            approvalCount: 0
-                        }
-                    );
-                });
+    try {
+        let chainRows;
+        let overviewSource = 'json';
+        if (nlLookupSupabase.shouldUseSupabaseForNlLookup()) {
+            try {
+                const dbMap = await nlLookupSupabase.lookupStoresBatchFromDb(region, catalogStores);
+                if (dbMap) {
+                    overviewSource = 'db';
+                    chainRows = catalogStores.map((canonical) => {
+                        const tracked = dbMap.get(canonical);
+                        return (
+                            tracked || {
+                                store: canonical,
+                                last_reported_restock_date: null,
+                                last_checked_date: null,
+                                approvalCount: 0
+                            }
+                        );
+                    });
+                }
+            } catch (err) {
+                console.warn('[nl_lookup] Remote batch lookup failed, using saved file data:', err.message || err);
             }
-        } catch (err) {
-            console.warn('[nl_lookup] Remote batch lookup failed, using saved file data:', err.message || err);
         }
-    }
-    if (!chainRows) {
-        const lastRestocks = dataManager.getLastRestocks();
-        chainRows = catalogStores.map((canonical) => {
-            const tracked = lastRestocks.find((r) => r.store === canonical);
-            return tracked
-                ? tracked
-                : {
-                      store: canonical,
-                      last_reported_restock_date: null,
-                      last_checked_date: null,
-                      approvalCount: 0
-                  };
+        if (!chainRows) {
+            const lastRestocks = dataManager.getLastRestocks();
+            chainRows = catalogStores.map((canonical) => {
+                const tracked = lastRestocks.find((r) => r.store === canonical);
+                return tracked
+                    ? tracked
+                    : {
+                          store: canonical,
+                          last_reported_restock_date: null,
+                          last_checked_date: null,
+                          approvalCount: 0
+                      };
+            });
+        }
+
+        const chainLabel = nlLookupChainLabel(storeType);
+        const regionLabel = region === 'va' ? 'Virginia' : 'Maryland';
+        const color =
+            storeType === 'target'
+                ? 0xff4444
+                : storeType === 'bestbuy'
+                  ? 0xfff200
+                  : storeType === 'walmart'
+                    ? 0x0071ce
+                    : storeType === 'barnesandnoble'
+                      ? 0x2ecc71
+                      : 0x5865f2;
+
+        const footerBits = `${config.settings?.cleanupDay || 'Sunday'} (${config.settings?.cleanupTime || '00:00'})`;
+        const FOOTER = `New Look lookup · Scheduled cleanup ${footerBits}`;
+
+        const MAX_FIELDS = 25;
+        const fieldBatches = [];
+        for (let i = 0; i < chainRows.length; i += MAX_FIELDS) {
+            fieldBatches.push(chainRows.slice(i, i + MAX_FIELDS));
+        }
+
+        const embeds = [];
+        fieldBatches.forEach((batch, idx) => {
+            const eb = new EmbedBuilder()
+                .setColor(color)
+                .setTitle(
+                    fieldBatches.length > 1
+                        ? `📋 ${chainLabel} · ${regionLabel} (${idx + 1}/${fieldBatches.length})`
+                        : `📋 ${chainLabel} · ${regionLabel} — all locations`
+                )
+                .setDescription(`**${chainRows.length}** locations · last reported restock`);
+
+            batch.forEach((storeData) => {
+                const displayName = nlLookupDisplayShortName(storeData.store, storeType);
+                let value = `**Last reported restock:** ${nlLookupLastReportedDisplay(storeData, overviewSource)}`;
+                if (storeData.last_checked_date) {
+                    value += `\n**Last checked:** ${formatNlDate(storeData.last_checked_date)} · ${nlTimeShort(storeData.last_checked_date)} · ${nlRelative(storeData.last_checked_date)}`;
+                }
+                eb.addFields({ name: `🏪 ${displayName}`, value, inline: false });
+            });
+
+            embeds.push(eb);
         });
-    }
 
-    const chainLabel = nlLookupChainLabel(storeType);
-    const regionLabel = region === 'va' ? 'Virginia' : 'Maryland';
-    const color =
-        storeType === 'target'
-            ? 0xff4444
-            : storeType === 'bestbuy'
-              ? 0xfff200
-              : storeType === 'walmart'
-                ? 0x0071ce
-                : storeType === 'barnesandnoble'
-                  ? 0x2ecc71
-                  : 0x5865f2;
+        if (embeds.length > 0) {
+            embeds[embeds.length - 1].setFooter({ text: FOOTER });
+        }
 
-    const footerBits = `${config.settings?.cleanupDay || 'Sunday'} (${config.settings?.cleanupTime || '00:00'})`;
-    const FOOTER = `New Look lookup · Scheduled cleanup ${footerBits}`;
+        const MAX_EMBEDS_REPLY = 10;
+        const embedChunks = [];
+        for (let i = 0; i < embeds.length; i += MAX_EMBEDS_REPLY) {
+            embedChunks.push(embeds.slice(i, i + MAX_EMBEDS_REPLY));
+        }
 
-    const MAX_FIELDS = 25;
-    const fieldBatches = [];
-    for (let i = 0; i < chainRows.length; i += MAX_FIELDS) {
-        fieldBatches.push(chainRows.slice(i, i + MAX_FIELDS));
-    }
-
-    const embeds = [];
-    fieldBatches.forEach((batch, idx) => {
-        const eb = new EmbedBuilder()
-            .setColor(color)
-            .setTitle(
-                fieldBatches.length > 1
-                    ? `📋 ${chainLabel} · ${regionLabel} (${idx + 1}/${fieldBatches.length})`
-                    : `📋 ${chainLabel} · ${regionLabel} — all locations`
-            )
-            .setDescription(`**${chainRows.length}** locations · last reported restock`);
-
-        batch.forEach((storeData) => {
-            const displayName = nlLookupDisplayShortName(storeData.store, storeType);
-            let value = `**Last reported restock:** ${nlLookupLastReportedDisplay(storeData, overviewSource)}`;
-            if (storeData.last_checked_date) {
-                value += `\n**Last checked:** ${formatNlDate(storeData.last_checked_date)} · ${nlTimeShort(storeData.last_checked_date)} · ${nlRelative(storeData.last_checked_date)}`;
-            }
-            eb.addFields({ name: `🏪 ${displayName}`, value, inline: false });
+        await interaction.editReply({
+            embeds: embedChunks[0],
+            content: null
         });
-
-        embeds.push(eb);
-    });
-
-    if (embeds.length > 0) {
-        embeds[embeds.length - 1].setFooter({ text: FOOTER });
-    }
-
-    const MAX_EMBEDS_REPLY = 10;
-    const embedChunks = [];
-    for (let i = 0; i < embeds.length; i += MAX_EMBEDS_REPLY) {
-        embedChunks.push(embeds.slice(i, i + MAX_EMBEDS_REPLY));
-    }
-
-    await interaction.editReply({
-        embeds: embedChunks[0],
-        content: null
-    });
-    for (let c = 1; c < embedChunks.length; c++) {
-        await interaction.followUp({ embeds: embedChunks[c], ephemeral: true });
+        for (let c = 1; c < embedChunks.length; c++) {
+            await interaction.followUp({ embeds: embedChunks[c], ephemeral: true });
+        }
+    } catch (err) {
+        console.warn('[nl_lookup] Overview reply failed:', err.message || err);
+        const msg =
+            'Could not finish **all locations** lookup (database slow or unavailable). Try **Pick one location** or again in a moment.';
+        await interaction
+            .editReply({ content: msg, embeds: [], components: [] })
+            .catch(async () => {
+                await interaction.followUp({ content: msg, ephemeral: true }).catch(() => {});
+            });
     }
 }
 
@@ -550,35 +561,47 @@ async function handleNlLookupLocationPick(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const { storeData, dataSource } = await resolveNlLookupStoreData(region, store);
+    try {
+        const { storeData, dataSource } = await resolveNlLookupStoreData(region, store);
 
-    if (!storeData) {
-        return interaction.editReply({
-            content: nlLookupEmptyMessage('json')
-        });
+        if (!storeData) {
+            await interaction.editReply({
+                content: nlLookupEmptyMessage('json')
+            });
+            return;
+        }
+
+        const lastReportedLine = nlLookupLastReportedDisplay(storeData, dataSource);
+
+        let lastCheckedLine = '';
+        if (storeData.last_checked_date) {
+            lastCheckedLine = `${formatNlDate(storeData.last_checked_date)} · ${nlTimeShort(storeData.last_checked_date)} · ${nlRelative(storeData.last_checked_date)}`;
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor(region === 'md' ? 0xe74c3c : 0x3498db)
+            .setTitle(`🔍 Restock lookup — ${region.toUpperCase()}`)
+            .setDescription(store)
+            .addFields({ name: 'Last reported restock', value: lastReportedLine, inline: false })
+            .setFooter({
+                text: `New Look lookup · Scheduled cleanup ${config.settings?.cleanupDay || 'Sunday'} (${config.settings?.cleanupTime || '00:00'})`
+            });
+
+        if (lastCheckedLine) {
+            embed.addFields({ name: 'Last checked', value: lastCheckedLine, inline: false });
+        }
+
+        await interaction.editReply({ embeds: [embed], content: null });
+    } catch (err) {
+        console.warn('[nl_lookup] Single-location lookup failed:', err.message || err);
+        const msg =
+            'Could not load this store (database slow or unavailable). Please try again in a moment.';
+        await interaction
+            .editReply({ content: msg, embeds: [], components: [] })
+            .catch(async () => {
+                await interaction.followUp({ content: msg, ephemeral: true }).catch(() => {});
+            });
     }
-
-    const lastReportedLine = nlLookupLastReportedDisplay(storeData, dataSource);
-
-    let lastCheckedLine = '';
-    if (storeData.last_checked_date) {
-        lastCheckedLine = `${formatNlDate(storeData.last_checked_date)} · ${nlTimeShort(storeData.last_checked_date)} · ${nlRelative(storeData.last_checked_date)}`;
-    }
-
-    const embed = new EmbedBuilder()
-        .setColor(region === 'md' ? 0xe74c3c : 0x3498db)
-        .setTitle(`🔍 Restock lookup — ${region.toUpperCase()}`)
-        .setDescription(store)
-        .addFields({ name: 'Last reported restock', value: lastReportedLine, inline: false })
-        .setFooter({
-            text: `New Look lookup · Scheduled cleanup ${config.settings?.cleanupDay || 'Sunday'} (${config.settings?.cleanupTime || '00:00'})`
-        });
-
-    if (lastCheckedLine) {
-        embed.addFields({ name: 'Last checked', value: lastCheckedLine, inline: false });
-    }
-
-    await interaction.editReply({ embeds: [embed], content: null });
 }
 
 module.exports = {

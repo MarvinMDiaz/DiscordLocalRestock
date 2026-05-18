@@ -26,6 +26,9 @@
     "url": "https://github.com/MarvinMDiaz/DiscordLocalRestock/issues"
   },
   "homepage": "https://github.com/MarvinMDiaz/DiscordLocalRestock#readme",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
     "discord.js": "^14.21.0",

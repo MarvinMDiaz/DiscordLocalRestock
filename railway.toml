@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+# Node 22: see package.json "engines" and nixpacks.toml NIXPACKS_NODE_VERSION (Supabase client expects native WebSocket).
 
 [deploy]
 startCommand = "node src/index.js"

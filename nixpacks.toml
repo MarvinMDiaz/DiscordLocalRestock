@@ -1,0 +1,3 @@
+# Pin Node for Railway Nixpacks (native WebSocket for @supabase/supabase-js; avoids Node 18 warning).
+[variables]
+NIXPACKS_NODE_VERSION = "22"

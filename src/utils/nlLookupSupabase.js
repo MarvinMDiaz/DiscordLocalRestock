@@ -2,12 +2,41 @@
 
 const { getSupabaseClientIfConfigured, getRestockHistoryTableName } = require('./restockHistorySync');
 
+const LOOKUP_SINGLE_TIMEOUT_MS = Math.max(
+    5000,
+    Number.parseInt(String(process.env.NL_LOOKUP_SINGLE_TIMEOUT_MS || '').trim(), 10) || 28000
+);
+const LOOKUP_BATCH_TIMEOUT_MS = Math.max(
+    LOOKUP_SINGLE_TIMEOUT_MS,
+    Number.parseInt(String(process.env.NL_LOOKUP_BATCH_TIMEOUT_MS || '').trim(), 10) || 55000
+);
+
+/**
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ * @param {string} context
+ * @returns {Promise<T>}
+ */
+async function withTimeout(promise, ms, context) {
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${context} timed out after ${ms}ms`)), ms);
+    });
+    try {
+        return await Promise.race([promise, timeoutPromise]);
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * New Look lookup: read restock week summaries from Supabase `restock_history`
  * (same table as approval sync / backfill / predictions).
  *
  * Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY), RESTOCK_ALERTS_TABLE.
  * Opt-out: NL_LOOKUP_USE_JSON=true → skip DB and let caller use JSON.
+ * Timeouts (optional): NL_LOOKUP_SINGLE_TIMEOUT_MS (default 28000), NL_LOOKUP_BATCH_TIMEOUT_MS (default 55000).
  *
  * **Matching:** `restock_history` uses short `store` + separate `location` (address). Catalog lines are
  * `Chain - Nickname - Address`. We match `region` + `location` first (exact, then normalized in-memory),
@@ -193,7 +222,11 @@ async function lookupSingleStoreFromDb(regionLower, storeCanonical) {
     const sb = getSupabaseClientIfConfigured();
     if (!sb) return null;
     const table = getRestockHistoryTableName();
-    const approvedAtIso = await fetchApprovedAtList(sb, table, regionLower, storeCanonical);
+    const approvedAtIso = await withTimeout(
+        fetchApprovedAtList(sb, table, regionLower, storeCanonical),
+        LOOKUP_SINGLE_TIMEOUT_MS,
+        'nl_lookup_single'
+    );
     return {
         store: storeCanonical,
         ...aggregateApprovalTimestamps(approvedAtIso)
@@ -210,24 +243,32 @@ async function lookupStoresBatchFromDb(regionLower, catalogStores) {
     if (!sb) return null;
     const table = getRestockHistoryTableName();
 
-    const concurrency = 12;
-    /** @type {Map<string, ReturnType<typeof aggregateApprovalTimestamps> & { store: string }>} */
-    const map = new Map();
+    const runBatch = async () => {
+        const concurrency = 12;
+        /** @type {Map<string, ReturnType<typeof aggregateApprovalTimestamps> & { store: string }>} */
+        const map = new Map();
 
-    for (let i = 0; i < catalogStores.length; i += concurrency) {
-        const slice = catalogStores.slice(i, i + concurrency);
-        const results = await Promise.all(
-            slice.map(async (store) => {
-                const approvedAtIso = await fetchApprovedAtList(sb, table, regionLower, store);
-                return { store, ...aggregateApprovalTimestamps(approvedAtIso) };
-            })
-        );
-        for (const row of results) {
-            map.set(row.store, row);
+        for (let i = 0; i < catalogStores.length; i += concurrency) {
+            const slice = catalogStores.slice(i, i + concurrency);
+            const results = await Promise.all(
+                slice.map(async (store) => {
+                    const approvedAtIso = await withTimeout(
+                        fetchApprovedAtList(sb, table, regionLower, store),
+                        LOOKUP_SINGLE_TIMEOUT_MS,
+                        'nl_lookup_batch_store'
+                    );
+                    return { store, ...aggregateApprovalTimestamps(approvedAtIso) };
+                })
+            );
+            for (const row of results) {
+                map.set(row.store, row);
+            }
         }
-    }
 
-    return map;
+        return map;
+    };
+
+    return await withTimeout(runBatch(), LOOKUP_BATCH_TIMEOUT_MS, 'nl_lookup_batch');
 }
 
 module.exports = {
