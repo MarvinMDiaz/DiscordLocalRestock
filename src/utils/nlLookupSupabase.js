@@ -37,6 +37,7 @@ async function withTimeout(promise, ms, context) {
  * Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY), RESTOCK_ALERTS_TABLE.
  * Opt-out: NL_LOOKUP_USE_JSON=true → skip DB and let caller use JSON.
  * Timeouts (optional): NL_LOOKUP_SINGLE_TIMEOUT_MS (default 28000), NL_LOOKUP_BATCH_TIMEOUT_MS (default 55000).
+ * Debug: DEBUG_LOOKUP=true logs chosen timestamps (no secrets).
  *
  * **Matching:** `restock_history` uses short `store` + separate `location` (address). Catalog lines are
  * `Chain - Nickname - Address`. We match `region` + `location` first (exact, then normalized in-memory),
@@ -76,6 +77,50 @@ function debugLookupEnabled() {
     return v === '1' || v?.toLowerCase() === 'true';
 }
 
+const LOOKUP_DISPLAY_TZ = 'America/New_York';
+
+/**
+ * @param {string} context
+ * @param {string} storeCanonical
+ * @param {string[]} approvedAtIso
+ * @param {{ last_reported_restock_date: string|null }} agg
+ */
+function debugLookupTimestampLog(context, storeCanonical, approvedAtIso, agg) {
+    if (!debugLookupEnabled()) return;
+    const chosen = agg.last_reported_restock_date;
+    const d = chosen ? new Date(chosen) : null;
+    const ok = d && !Number.isNaN(d.getTime());
+    console.log(
+        '[DEBUG_LOOKUP]',
+        JSON.stringify({
+            context,
+            store: String(storeCanonical || '').slice(0, 120),
+            timezone: LOOKUP_DISPLAY_TZ,
+            rawTimestampsSample: (approvedAtIso || []).slice(0, 4),
+            chosenIsoForDisplay: chosen || null,
+            parsedUtcIso: ok ? d.toISOString() : null,
+            formattedEtDate: ok
+                ? new Intl.DateTimeFormat('en-US', {
+                      timeZone: LOOKUP_DISPLAY_TZ,
+                      weekday: 'long',
+                      month: '2-digit',
+                      day: '2-digit',
+                      year: '2-digit'
+                  }).format(d)
+                : null,
+            formattedEtTimeShort: ok
+                ? new Intl.DateTimeFormat('en-US', {
+                      timeZone: LOOKUP_DISPLAY_TZ,
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                  }).format(d)
+                : null,
+            fieldPolicy: 'per_row created_at else approved_at; aggregate picks latest instant'
+        })
+    );
+}
+
 /** Normalize en/em dashes to spaced hyphen for consistent ` - ` splitting. */
 function normalizeCatalogSeparators(line) {
     return String(line || '')
@@ -112,7 +157,8 @@ function normalizeAddr(s) {
 function rowsToApprovedIsoList(rows) {
     const out = [];
     for (const row of rows || []) {
-        const ts = row.approved_at || row.created_at;
+        // Prefer public alert post time; fallback to mod approval (often within seconds).
+        const ts = row.created_at || row.approved_at;
         if (ts) out.push(ts);
     }
     return out;
@@ -152,7 +198,7 @@ async function fetchApprovedAtList(sb, table, regionLower, storeCanonical) {
             .select('approved_at, created_at')
             .eq('region', letter)
             .eq('location', address)
-            .order('approved_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false, nullsFirst: false })
             .limit(500);
         if (error) throw error;
         if (data && data.length > 0) {
@@ -169,13 +215,13 @@ async function fetchApprovedAtList(sb, table, regionLower, storeCanonical) {
                 .from(table)
                 .select('approved_at, created_at, location')
                 .eq('region', letter)
-                .order('approved_at', { ascending: false, nullsFirst: false })
+                .order('created_at', { ascending: false, nullsFirst: false })
                 .limit(2500);
             if (error) throw error;
             const matched = (data || []).filter((r) => normalizeAddr(r.location) === normA);
             matched.sort((a, b) => {
-                const ta = new Date(a.approved_at || a.created_at).getTime();
-                const tb = new Date(b.approved_at || b.created_at).getTime();
+                const ta = new Date(a.created_at || a.approved_at).getTime();
+                const tb = new Date(b.created_at || b.approved_at).getTime();
                 return tb - ta;
             });
             if (matched.length > 0) {
@@ -192,7 +238,7 @@ async function fetchApprovedAtList(sb, table, regionLower, storeCanonical) {
             .select('approved_at, created_at')
             .eq('region', letter)
             .eq('store', shortStore)
-            .order('approved_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false, nullsFirst: false })
             .limit(500);
         if (error) throw error;
         if (data && data.length > 0) {
@@ -207,7 +253,7 @@ async function fetchApprovedAtList(sb, table, regionLower, storeCanonical) {
         .select('approved_at, created_at')
         .eq('region', letter)
         .eq('store', full)
-        .order('approved_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false })
         .limit(500);
     if (error) throw error;
     debugLookupMatch(letter, 'd_full_catalog_store', address, shortStore, data?.length || 0);
@@ -227,9 +273,11 @@ async function lookupSingleStoreFromDb(regionLower, storeCanonical) {
         LOOKUP_SINGLE_TIMEOUT_MS,
         'nl_lookup_single'
     );
+    const agg = aggregateApprovalTimestamps(approvedAtIso);
+    debugLookupTimestampLog('lookupSingleStoreFromDb', storeCanonical, approvedAtIso, agg);
     return {
         store: storeCanonical,
-        ...aggregateApprovalTimestamps(approvedAtIso)
+        ...agg
     };
 }
 

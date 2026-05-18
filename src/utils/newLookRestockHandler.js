@@ -4,6 +4,9 @@ const dataManager = require('./dataManager');
 const buttonRestockHandler = require('./buttonRestockHandler');
 const nlLookupSupabase = require('./nlLookupSupabase');
 
+/** All New Look lookup date/time strings use Eastern (DMV stores). */
+const LOOKUP_DISPLAY_TZ = 'America/New_York';
+
 function nlReportChannelId() {
     return config.channels?.newlookReportRestocks || '';
 }
@@ -42,12 +45,15 @@ function formatNlDate(dateString) {
     if (!dateString) return null;
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return null;
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayName = days[date.getDay()];
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-    return `${dayName} ${month}/${day}/${year}`;
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: LOOKUP_DISPLAY_TZ,
+        weekday: 'long',
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit'
+    }).formatToParts(date);
+    const part = (t) => parts.find((p) => p.type === t)?.value || '';
+    return `${part('weekday')} ${part('month')}/${part('day')}/${part('year')}`;
 }
 
 function nlRelative(iso) {
@@ -69,7 +75,12 @@ function nlTimeShort(iso) {
     if (!iso) return '';
     const date = new Date(iso);
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return new Intl.DateTimeFormat('en-US', {
+        timeZone: LOOKUP_DISPLAY_TZ,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    }).format(date);
 }
 
 // --- Report flow ---

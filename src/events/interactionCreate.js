@@ -98,6 +98,31 @@ async function handleLastCheckedStoreLocation(interaction, region, storeType) {
     }
 }
 
+/**
+ * New Look: avoid crashing on Discord 10062 / 40060 when the interaction token is already invalid.
+ * Common cause: two bot processes using the same token (e.g. local `npm run dev` + Railway) — only one can ACK each click.
+ *
+ * @param {string} label
+ * @param {import('discord.js').BaseInteraction} interaction
+ * @param {() => Promise<void>} fn
+ */
+async function runNewLookInteractionSafe(label, interaction, fn) {
+    try {
+        await fn();
+    } catch (err) {
+        const code = err && err.code;
+        if (code === 10062 || code === 40060 || code === 10008) {
+            console.warn(
+                `[interaction/${label}] Discord ${code}: interaction not usable. ` +
+                    'If two copies of this bot run with the same token, stop one (pause Railway or quit local).'
+            );
+            return;
+        }
+        console.error(`[interaction/${label}]`, err);
+        throw err;
+    }
+}
+
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
@@ -251,13 +276,17 @@ module.exports = {
 
                 if (customId === 'nl_btn_report_newlook') {
                     const newLookHandlers = require('../utils/newLookRestockHandler');
-                    await newLookHandlers.handleNlReportButton(interaction);
+                    await runNewLookInteractionSafe('nl_btn_report_newlook', interaction, () =>
+                        newLookHandlers.handleNlReportButton(interaction)
+                    );
                     return;
                 }
 
                 if (customId === 'nl_btn_lookup_newlook') {
                     const newLookHandlers = require('../utils/newLookRestockHandler');
-                    await newLookHandlers.handleNlLookupButton(interaction);
+                    await runNewLookInteractionSafe('nl_btn_lookup_newlook', interaction, () =>
+                        newLookHandlers.handleNlLookupButton(interaction)
+                    );
                     return;
                 }
 
@@ -522,31 +551,45 @@ module.exports = {
 
             // New Look (consolidated VA/MD)
             if (customId === 'nl_report_region_pick') {
-                await newLookHandlers.handleNlReportRegionPick(interaction);
+                await runNewLookInteractionSafe('nl_report_region_pick', interaction, () =>
+                    newLookHandlers.handleNlReportRegionPick(interaction)
+                );
                 return;
             }
             if (customId.startsWith('nl_restock_store_pick_')) {
-                await newLookHandlers.handleNlReportStorePick(interaction);
+                await runNewLookInteractionSafe('nl_restock_store_pick', interaction, () =>
+                    newLookHandlers.handleNlReportStorePick(interaction)
+                );
                 return;
             }
             if (customId.startsWith('nl_restock_location_')) {
-                await newLookHandlers.handleNlReportLocationPick(interaction);
+                await runNewLookInteractionSafe('nl_restock_location', interaction, () =>
+                    newLookHandlers.handleNlReportLocationPick(interaction)
+                );
                 return;
             }
             if (customId === 'nl_lookup_region_pick') {
-                await newLookHandlers.handleNlLookupRegionPick(interaction);
+                await runNewLookInteractionSafe('nl_lookup_region_pick', interaction, () =>
+                    newLookHandlers.handleNlLookupRegionPick(interaction)
+                );
                 return;
             }
             if (customId.startsWith('nl_lookup_store_pick_')) {
-                await newLookHandlers.handleNlLookupStorePick(interaction);
+                await runNewLookInteractionSafe('nl_lookup_store_pick', interaction, () =>
+                    newLookHandlers.handleNlLookupStorePick(interaction)
+                );
                 return;
             }
             if (customId.startsWith('nl_lookup_scope_')) {
-                await newLookHandlers.handleNlLookupScopePick(interaction);
+                await runNewLookInteractionSafe('nl_lookup_scope', interaction, () =>
+                    newLookHandlers.handleNlLookupScopePick(interaction)
+                );
                 return;
             }
             if (customId.startsWith('nl_lookup_location_')) {
-                await newLookHandlers.handleNlLookupLocationPick(interaction);
+                await runNewLookInteractionSafe('nl_lookup_location', interaction, () =>
+                    newLookHandlers.handleNlLookupLocationPick(interaction)
+                );
                 return;
             }
 
