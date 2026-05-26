@@ -150,11 +150,11 @@ async function showOrRefreshForecastCard(interaction, embeds) {
 
 async function acknowledgePublicPredict(interaction, payload) {
     try {
-        await clearForecastCard(interaction);
         await interaction.deferReply({ ephemeral: true });
+        await clearForecastCard(interaction);
         return interaction.editReply(payload);
     } catch (err) {
-        console.error('[predict] public session open failed:', err);
+        console.error('[predict] public session open failed:', err?.message || err);
         try {
             if (interaction.deferred) {
                 return await interaction.editReply({
@@ -173,6 +173,37 @@ async function acknowledgePublicPredict(interaction, payload) {
             }
         } catch (_) {
             /* ignore */
+        }
+    }
+}
+
+const PREDICT_GENERIC_FAIL =
+    'Something went wrong while generating the prediction. Please try again from the **Restock timing** panel.';
+
+/**
+ * Acknowledge a component interaction quickly, then clear forecast follow-ups and refresh the wizard message.
+ * @param {import('discord.js').MessageComponentInteraction} interaction
+ * @param {import('discord.js').InteractionEditReplyOptions} payload
+ */
+async function safeDeferClearEditReply(interaction, payload) {
+    try {
+        await interaction.deferUpdate();
+        await clearForecastCard(interaction);
+        return await interaction.editReply(payload);
+    } catch (err) {
+        console.error('[predict] wizard step failed:', err?.message || err);
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({
+                    content: PREDICT_GENERIC_FAIL,
+                    embeds: [],
+                    components: []
+                });
+            } else {
+                await interaction.reply({ content: PREDICT_GENERIC_FAIL, ephemeral: true });
+            }
+        } catch (_) {
+            /* interaction token expired or already handled */
         }
     }
 }
@@ -496,10 +527,17 @@ function pickForecastRow(filtered, cfgFullLine) {
 }
 
 async function loadAnalyzedForRegion(region) {
+    console.log('[predict] loadAnalyzedForRegion start', { region });
     const supabase = createPredictSupabase();
     const tbl = tableName();
     const rows = await svc.fetchRestockRows(supabase, tbl, region);
-    return svc.analyzeRegion(rows, region);
+    const analyzed = svc.analyzeRegion(rows, region);
+    console.log('[predict] loadAnalyzedForRegion done', {
+        region,
+        modeledCount: analyzed?.predictions?.length ?? 0,
+        thinCount: analyzed?.insufficient?.length ?? 0
+    });
+    return analyzed;
 }
 
 /**
@@ -728,9 +766,7 @@ async function handlePredictRetailSelect(interaction) {
 
     const uid = interaction.user.id;
 
-    await clearForecastCard(interaction);
-    await interaction.deferUpdate();
-    await interaction.editReply({
+    return safeDeferClearEditReply(interaction, {
         content: locationStepContent(region, retailKey),
         embeds: [],
         components: locationActionRows(region, retailKey, uid)
@@ -805,7 +841,7 @@ async function handlePredictConfigLocationSelect(interaction) {
         ]);
         return;
     } catch (err) {
-        console.error('[predict] cfg location failed:', err);
+        console.error('[predict] cfg location failed:', err?.message || err);
         await clearForecastCard(interaction);
         return interaction.editReply({
             content: locationStepContent(region, retailKey),
@@ -832,8 +868,7 @@ async function handlePredictButton(interaction) {
     if (cid === 'rstk_predict_home') {
         const payload = { content: rootContent(), embeds: [], components: wizardHomeRows() };
         if (isPredictWizardMessage(interaction)) {
-            await clearForecastCard(interaction);
-            return interaction.update(payload);
+            return safeDeferClearEditReply(interaction, payload);
         }
         return acknowledgePublicPredict(interaction, payload);
     }
@@ -846,8 +881,7 @@ async function handlePredictButton(interaction) {
             components: retailerSelectRows(region)
         };
         if (isPredictWizardMessage(interaction)) {
-            await clearForecastCard(interaction);
-            return interaction.update(payload);
+            return safeDeferClearEditReply(interaction, payload);
         }
         return acknowledgePublicPredict(interaction, payload);
     }
@@ -855,8 +889,7 @@ async function handlePredictButton(interaction) {
     const backRetailMatch = cid.match(BACK_RETAIL_RE);
     if (backRetailMatch) {
         const region = /** @type {'VA'|'MD'} */ (backRetailMatch[1]);
-        await clearForecastCard(interaction);
-        return interaction.update({
+        return safeDeferClearEditReply(interaction, {
             content: retailerStepContent(region),
             embeds: [],
             components: retailerSelectRows(region)
@@ -872,8 +905,7 @@ async function handlePredictButton(interaction) {
             content +=
                 `\n⚠️ _No stores listed in **config.json** for **${retailLabel(retailKey)}** (${region})._`;
         }
-        await clearForecastCard(interaction);
-        return interaction.update({
+        return safeDeferClearEditReply(interaction, {
             content,
             embeds: [],
             components: locationActionRows(region, retailKey, uid)
@@ -895,7 +927,7 @@ async function handlePredictButton(interaction) {
             });
             await showOrRefreshForecastCard(interaction, buildRetailOverviewEmbeds(region, retailKey, filtered));
         } catch (err) {
-            console.error('[predict] all-stores failed:', err);
+            console.error('[predict] all-stores failed:', err?.message || err);
             await clearForecastCard(interaction);
             await interaction.editReply({
                 content: locationStepContent(region, retailKey),
